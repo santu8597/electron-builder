@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Parsed HTML Output</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.secondary {
+            background: #2196F3;
+        }
+        button.secondary:hover {
+            background: #0b7dda;
+        }
+        .output {
+            margin-top: 20px;
+        }
+        .raw-html {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .rendered-html {
+            border: 2px solid #4CAF50;
+            padding: 20px;
+            margin-top: 20px;
+            background: white;
+        }
+        .stats {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .stats h3 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+        .tab-buttons {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        .tab-buttons button {
+            padding: 8px 16px;
+            background: #e0e0e0;
+            color: #333;
+        }
+        .tab-buttons button.active {
+            background: #4CAF50;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 View Parsed HTML Output</h1>
+        
+        <div class="controls">
+            <button onclick="loadHTML()">Load Latest HTML</button>
+            <button onclick="downloadHTML()" class="secondary">Download HTML</button>
+            <button onclick="clearStorage()" class="secondary">Clear Storage</button>
+        </div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <h3>Statistics</h3>
+            <p><strong>Size:</strong> <span id="size">-</span> characters</p>
+            <p><strong>Conversion Method:</strong> <span id="method">-</span></p>
+        </div>
+
+        <div class="output">
+            <div class="tab-buttons">
+                <button class="active" onclick="switchTab('raw')">Raw HTML</button>
+                <button onclick="switchTab('rendered')">Rendered View</button>
+            </div>
+            
+            <div id="raw-tab" class="tab-content active">
+                <div class="raw-html" id="raw-output">
+                    No HTML loaded yet. Upload a DOCX file in the main app, then click "Load Latest HTML".
+                </div>
+            </div>
+            
+            <div id="rendered-tab" class="tab-content">
+                <div class="rendered-html" id="rendered-output">
+                    No HTML loaded yet.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function loadHTML() {
+            const html = localStorage.getItem('last_parsed_html');
+            if (html) {
+                document.getElementById('raw-output').textContent = html;
+                document.getElementById('rendered-output').innerHTML = html;
+                
+                // Show stats
+                document.getElementById('stats').style.display = 'block';
+                document.getElementById('size').textContent = html.length.toLocaleString();
+                
+                // Try to detect conversion method
+                let method = 'Unknown';
+                if (html.includes('pandoc')) method = 'Pandoc';
+                else if (html.includes('mammoth')) method = 'Mammoth';
+                else if (html.includes('<p>') && html.includes('<strong>')) method = 'Likely Mammoth/Browser';
+                document.getElementById('method').textContent = method;
+                
+                console.log('HTML loaded successfully');
+                console.log('Size:', html.length, 'characters');
+            } else {
+                alert('No HTML found in storage. Please upload a DOCX file in the main app first.');
+            }
+        }
+
+        function downloadHTML() {
+            const html = localStorage.getItem('last_parsed_html');
+            if (html) {
+                const blob = new Blob([html], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'parsed_output_' + new Date().getTime() + '.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                console.log('HTML downloaded');
+            } else {
+                alert('No HTML to download');
+            }
+        }
+
+        function clearStorage() {
+            if (confirm('Are you sure you want to clear the stored HTML?')) {
+                localStorage.removeItem('last_parsed_html');
+                document.getElementById('raw-output').textContent = 'Storage cleared.';
+                document.getElementById('rendered-output').innerHTML = 'Storage cleared.';
+                document.getElementById('stats').style.display = 'none';
+                console.log('Storage cleared');
+            }
+        }
+
+        function switchTab(tab) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-buttons button').forEach(b => b.classList.remove('active'));
+            
+            // Show selected tab
+            if (tab === 'raw') {
+                document.getElementById('raw-tab').classList.add('active');
+                document.querySelectorAll('.tab-buttons button')[0].classList.add('active');
+            } else {
+                document.getElementById('rendered-tab').classList.add('active');
+                document.querySelectorAll('.tab-buttons button')[1].classList.add('active');
+            }
+        }
+
+        // Auto-load on page load if HTML exists
+        window.addEventListener('load', () => {
+            const html = localStorage.getItem('last_parsed_html');
+            if (html) {
+                loadHTML();
+            }
+        });
+    </script>
+</body>
+</html>
