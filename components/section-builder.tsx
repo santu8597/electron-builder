@@ -6,6 +6,7 @@ import { Trash2, ChevronDown } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import type { Section } from "@/app/page"
 import QuestionEditor from "./question-editor"
+import { showErrorDialog } from "@/lib/electron-api"
 
 // Declare MathJax type
 declare global {
@@ -54,7 +55,6 @@ function toRoman(num: number): string {
 export default function SectionBuilder({ section, allSections, setPaperSections }: SectionBuilderProps) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [editingQuestion, setEditingQuestion] = useState<string | null>(null)
-  const [dropError, setDropError] = useState<string | null>(null)
   const sectionRef = useRef<HTMLDivElement>(null)
 
   const sectionMarks = section.questions.reduce((sum, q) => sum + q.marks, 0)
@@ -103,9 +103,11 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
 
       // Validate that question belongs to this group
       if (questionGroup && sectionGroup !== questionGroup) {
-        // Show error message
-        setDropError(`Cannot add Group ${questionGroup} question to ${section.title}`)
-        setTimeout(() => setDropError(null), 3000)
+        // Show native error dialog
+        showErrorDialog(
+          `Cannot add Group ${questionGroup} question to ${section.title}`,
+          'Please drag questions only to their respective groups.'
+        )
         
         // Show visual feedback for invalid drop
         const element = e.currentTarget as HTMLElement
@@ -123,8 +125,10 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
       )
 
       if (questionExists) {
-        setDropError(`This question is already added to the paper`)
-        setTimeout(() => setDropError(null), 3000)
+        showErrorDialog(
+          'Duplicate Question',
+          'This question is already added to the paper.'
+        )
         return
       }
 
@@ -142,22 +146,28 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
         ).length
         
         if (isMCQ && currentMCQs >= QUESTION_LIMITS['A-MCQ']) {
-          setDropError(`Maximum ${QUESTION_LIMITS['A-MCQ']} MCQ questions allowed in Group A`)
-          setTimeout(() => setDropError(null), 3000)
+          showErrorDialog(
+            `Maximum ${QUESTION_LIMITS['A-MCQ']} MCQ Questions`,
+            `Group A can only have up to ${QUESTION_LIMITS['A-MCQ']} MCQ questions.`
+          )
           return
         }
         
         if (isFillInBlanks && currentFIBs >= QUESTION_LIMITS['A-FIB']) {
-          setDropError(`Maximum ${QUESTION_LIMITS['A-FIB']} Fill in the Blanks questions allowed in Group A`)
-          setTimeout(() => setDropError(null), 3000)
+          showErrorDialog(
+            `Maximum ${QUESTION_LIMITS['A-FIB']} Fill in the Blanks Questions`,
+            `Group A can only have up to ${QUESTION_LIMITS['A-FIB']} Fill in the Blanks questions.`
+          )
           return
         }
       } else {
         // For other groups (B, C, D, E), check overall limit
         const limit = QUESTION_LIMITS[sectionGroup as keyof typeof QUESTION_LIMITS]
         if (limit && section.questions.length >= limit) {
-          setDropError(`Maximum ${limit} questions allowed in Group ${sectionGroup}`)
-          setTimeout(() => setDropError(null), 3000)
+          showErrorDialog(
+            `Maximum ${limit} Questions in Group ${sectionGroup}`,
+            `Group ${sectionGroup} can only have up to ${limit} questions.`
+          )
           return
         }
       }
@@ -180,14 +190,6 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
 
   return (
     <div className="border border-border rounded-lg overflow-hidden">
-      {/* Error Message */}
-      {dropError && (
-        <div className="bg-red-50 border-b border-red-200 px-4 py-2 text-sm text-red-700 flex items-center gap-2">
-          <span className="font-medium">⚠️</span>
-          <span>{dropError}</span>
-        </div>
-      )}
-      
       {/* Section Header */}
       <div className="bg-white border-b border-border p-4 flex items-center justify-between">
         <div className="flex items-center gap-3 flex-1 min-w-0">

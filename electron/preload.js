@@ -17,4 +17,14 @@ contextBridge.exposeInMainWorld('electron', {
   exportDocument: async (html, format, filename) => {
     return await ipcRenderer.invoke('export-document', html, format, filename);
   },
+  // Native dialog APIs
+  showErrorDialog: async (options) => {
+    return await ipcRenderer.invoke('show-error-dialog', options);
+  },
+  showInfoDialog: async (options) => {
+    return await ipcRenderer.invoke('show-info-dialog', options);
+  },
+  showWarningDialog: async (options) => {
+    return await ipcRenderer.invoke('show-warning-dialog', options);
+  },
 });

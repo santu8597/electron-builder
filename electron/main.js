@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -150,6 +150,45 @@ ipcMain.handle('export-document', async (event, html, format, filename) => {
     console.error('Export error:', error);
     throw error;
   }
+});
+
+// Handler for showing native error dialogs
+ipcMain.handle('show-error-dialog', async (event, options) => {
+  const { title, message, detail } = options;
+  
+  return await dialog.showMessageBox(mainWindow, {
+    type: 'error',
+    title: title || 'Error',
+    message: message || 'An error occurred',
+    detail: detail,
+    buttons: ['OK']
+  });
+});
+
+// Handler for showing native info dialogs
+ipcMain.handle('show-info-dialog', async (event, options) => {
+  const { title, message, detail } = options;
+  
+  return await dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: title || 'Information',
+    message: message || '',
+    detail: detail,
+    buttons: ['OK']
+  });
+});
+
+// Handler for showing native warning dialogs
+ipcMain.handle('show-warning-dialog', async (event, options) => {
+  const { title, message, detail } = options;
+  
+  return await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    title: title || 'Warning',
+    message: message || '',
+    detail: detail,
+    buttons: ['OK']
+  });
 });
 
 // ============= Document Conversion Functions =============

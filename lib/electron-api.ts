@@ -10,6 +10,9 @@ declare global {
       };
       convertDocx: (fileBuffer: ArrayBuffer, fileName: string) => Promise<{ html: string; method: string }>;
       exportDocument: (html: string, format: string, filename: string) => Promise<ArrayBuffer>;
+      showErrorDialog: (options: { title?: string; message: string; detail?: string }) => Promise<void>;
+      showInfoDialog: (options: { title?: string; message: string; detail?: string }) => Promise<void>;
+      showWarningDialog: (options: { title?: string; message: string; detail?: string }) => Promise<void>;
     };
   }
 }
@@ -26,4 +29,30 @@ export async function exportDocument(html: string, format: 'pdf' | 'docx', filen
   return new Blob([buffer], {
     type: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   });
+}
+
+// Native dialog functions
+export async function showErrorDialog(message: string, detail?: string): Promise<void> {
+  if (typeof window !== 'undefined' && window.electron) {
+    await window.electron.showErrorDialog({ message, detail });
+  } else {
+    // Fallback to browser alert
+    alert(`Error: ${message}${detail ? '\n' + detail : ''}`);
+  }
+}
+
+export async function showInfoDialog(message: string, detail?: string): Promise<void> {
+  if (typeof window !== 'undefined' && window.electron) {
+    await window.electron.showInfoDialog({ message, detail });
+  } else {
+    alert(message);
+  }
+}
+
+export async function showWarningDialog(message: string, detail?: string): Promise<void> {
+  if (typeof window !== 'undefined' && window.electron) {
+    await window.electron.showWarningDialog({ message, detail });
+  } else {
+    alert(`Warning: ${message}${detail ? '\n' + detail : ''}`);
+  }
 }
