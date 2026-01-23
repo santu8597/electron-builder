@@ -121,13 +121,16 @@ ipcMain.handle('convert-docx', async (event, fileBuffer, fileName) => {
   console.log('Converting document:', fileName);
   
   try {
+    // Convert ArrayBuffer to Node.js Buffer if needed
+    const buffer = Buffer.isBuffer(fileBuffer) ? fileBuffer : Buffer.from(fileBuffer);
+    
     // Try pandoc first, fall back to mammoth
     try {
-      const html = await convertWithPandoc(fileBuffer, fileName);
+      const html = await convertWithPandoc(buffer, fileName);
       return { html, method: 'pandoc' };
     } catch (pandocError) {
       console.log('Pandoc failed, trying mammoth:', pandocError.message);
-      const html = await convertWithMammoth(fileBuffer);
+      const html = await convertWithMammoth(buffer);
       return { html, method: 'mammoth' };
     }
   } catch (error) {
