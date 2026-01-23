@@ -1,4 +1,5 @@
 import type { Section } from "@/app/page"
+import { exportDocument } from "./electron-api"
 
 /**
  * Export question paper to PDF format
@@ -397,24 +398,7 @@ export async function exportToWordWithPandoc(title: string, sections: Section[])
     const html = generateHTMLForPandoc(title, sections)
     const filename = title.replace(/\s+/g, '_')
 
-    const response = await fetch('/api/export-pandoc', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        html,
-        format: 'docx',
-        filename,
-      }),
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Export failed')
-    }
-
-    const blob = await response.blob()
+    const blob = await exportDocument(html, 'docx', filename)
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -444,30 +428,7 @@ export async function exportToPDFWithPandoc(title: string, sections: Section[]):
       const html = generateHTMLForPandoc(title, sections)
       const filename = title.replace(/\s+/g, '_')
 
-      const response = await fetch('/api/export-pandoc', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          html,
-          format: 'pdf',
-          filename,
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        
-        // If pandoc fails, use browser method as ultimate fallback
-        if (error.error?.includes('PDF engine') || error.error?.includes('wkhtmltopdf')) {
-          throw new Error('Using browser print-to-PDF instead')
-        }
-        
-        throw new Error(error.error || 'Export failed')
-      }
-
-      const blob = await response.blob()
+      const blob = await exportDocument(html, 'pdf', filename)
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url

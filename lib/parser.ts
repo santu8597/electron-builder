@@ -1,5 +1,6 @@
 import type { Section, ParsedQuestion } from "@/app/page"
 import { parseGroupA, parseMCQQuestions, parseFillInBlanksQuestions } from "./group-a-parser"
+import { convertDocx } from "./electron-api"
 
 /**
  * Generate a unique ID for a question based on group, section, and number
@@ -12,26 +13,13 @@ function generateUniqueQuestionId(group: string, sectionIndex: number, questionN
  * Convert DOCX to HTML using browser-compatible methods
  */
 async function convertDocxToHtml(file: File): Promise<string> {
-  // Try server-side conversion first (supports pandoc)
+  // Try using Electron API or server-side conversion first (supports pandoc)
   try {
-    const formData = new FormData()
-    formData.append('file', file)
-    
-    const response = await fetch('/api/convert-docx', {
-      method: 'POST',
-      body: formData
-    })
-    
-    if (response.ok) {
-      const result = await response.json()
-      console.log(`Document converted using: ${result.method}`)
-      return result.html
-    } else {
-      const errorResult = await response.json()
-      console.warn('Server-side conversion failed:', errorResult.error)
-    }
+    const result = await convertDocx(file);
+    console.log(`Document converted using: ${result.method}`);
+    return result.html;
   } catch (error) {
-    console.warn('Server-side conversion failed, using client-side fallback:', error)
+    console.warn('Server/Electron conversion failed, using client-side fallback:', error);
   }
 
   // Fallback to client-side mammoth conversion

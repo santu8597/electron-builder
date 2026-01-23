@@ -2,11 +2,19 @@
   "name": "my-v0-project",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint .",
-    "start": "next start"
+    "postinstall": "node scripts/download-pandoc.js",
+    "start": "cross-env NODE_ENV=production electron .",
+    "electron:dev": "concurrently \"cross-env NODE_ENV=development next dev\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
+    "electron:start": "pnpm build && pnpm start",
+    "electron:build": "node scripts/download-pandoc.js && next build && electron-builder",
+    "electron:build:win": "node scripts/download-pandoc.js && next build && electron-builder --win",
+    "electron:build:mac": "node scripts/download-pandoc.js && next build && electron-builder --mac",
+    "electron:build:linux": "node scripts/download-pandoc.js && next build && electron-builder --linux"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -82,9 +90,15 @@
     "@types/nodemailer": "^7.0.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "adm-zip": "^0.5.16",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^40.0.0",
+    "electron-builder": "^26.4.0",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^9.0.3"
   }
 }

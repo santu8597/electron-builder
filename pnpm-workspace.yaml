@@ -1,0 +1,6 @@
+ignoredBuiltDependencies:
+  - bcrypt
+  - core-js
+  - electron
+  - electron-winstaller
+  - sharp
