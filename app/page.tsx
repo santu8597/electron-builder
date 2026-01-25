@@ -58,7 +58,9 @@ export default function Home() {
 
   const handleExportPDF = async () => {
     try {
-      await exportToPDFWithPandoc(draftTitle, paperSections)
+      // Extract unique IDs from selected questions
+      const selectedIds = selectedQuestions.map(q => q.uniqueId || q.id)
+      await exportToPDFWithPandoc(draftTitle, paperSections, selectedIds)
     } catch (error: any) {
       alert(error.message || 'Failed to export to PDF')
     }
@@ -66,7 +68,9 @@ export default function Home() {
 
   const handleExportWord = async () => {
     try {
-      await exportToWordWithPandoc(draftTitle, paperSections)
+      // Extract unique IDs from selected questions
+      const selectedIds = selectedQuestions.map(q => q.uniqueId || q.id)
+      await exportToWordWithPandoc(draftTitle, paperSections, selectedIds)
     } catch (error: any) {
       alert(error.message || 'Failed to export to Word')
     }

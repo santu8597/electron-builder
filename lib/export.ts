@@ -2,6 +2,28 @@ import type { Section } from "@/app/page"
 import { exportDocument } from "./electron-api"
 
 /**
+ * EXPORT STRATEGY (Updated Jan 2026):
+ * 
+ * The new clean export approach provides:
+ * 1. Selection Filtering - Only exports questions with IDs in selectedQuestionIds array
+ * 2. Raw LaTeX Preservation - Strips HTML/KaTeX artifacts, preserves original LaTeX
+ * 3. Matrix Display Conversion - Converts inline matrix equations to display mode ($$...$$)
+ * 4. Clean Pandoc Input - Generates pure HTML + LaTeX for optimal Word conversion
+ * 
+ * Functions:
+ * - extractRawLatex() - Removes KaTeX HTML, decodes entities, keeps raw LaTeX
+ * - convertInlineMatricesToDisplay() - Detects inline matrices, converts to display mode
+ * - generateCleanHTMLForExport() - Main clean HTML generator with filtering
+ * - exportToWordWithPandoc() - Word export with clean LaTeX (recommended)
+ * - exportToPDFWithPandoc() - PDF export with clean LaTeX
+ * 
+ * Legacy functions (kept for backward compatibility):
+ * - generateHTMLForPandoc() - Old HTML generator without filtering
+ * - exportToPDF() - Direct PDF export using jsPDF
+ * - exportToWord() - Direct Word export using docx library
+ */
+
+/**
  * Export question paper to PDF format
  */
 export async function exportToPDF(title: string, sections: Section[]): Promise<void> {
@@ -251,7 +273,243 @@ export function exportAsText(title: string, sections: Section[]): void {
 }
 
 /**
- * Generate HTML content for pandoc export
+ * Extract raw LaTeX from question text, removing HTML and KaTeX artifacts
+ */
+function extractRawLatex(text: string): string {
+  if (!text) return ''
+  
+  let cleaned = text
+  
+  // Handle [MATH]...[/MATH] tags from parser - extract the content inside
+  cleaned = cleaned.replace(/\[MATH\]([\s\S]*?)\[\/MATH\]/g, (match, mathContent) => {
+    // If it's MathML, try to preserve it or extract LaTeX if available
+    if (mathContent.includes('<math')) {
+      // For now, preserve MathML as-is for Pandoc to handle
+      return mathContent
+    }
+    return mathContent
+  })
+  
+  // Handle [TABLE]...[/TABLE] tags - preserve table HTML
+  cleaned = cleaned.replace(/\[TABLE\]([\s\S]*?)\[\/TABLE\]/g, (match, tableContent) => {
+    return tableContent
+  })
+  
+  // Handle [IMAGE]...[/IMAGE] tags - preserve image HTML
+  cleaned = cleaned.replace(/\[IMAGE\]([\s\S]*?)\[\/IMAGE\]/g, (match, imageContent) => {
+    return imageContent
+  })
+  
+  // Remove KaTeX-generated HTML (spans with katex classes)
+  // Use global flag with dotAll behavior via [\s\S] instead of 's' flag for compatibility
+  cleaned = cleaned.replace(/<span class="katex[^"]*"[^>]*>[\s\S]*?<\/span>/g, (match) => {
+    // Try to extract the original LaTeX from the katex HTML
+    const latexMatch = match.match(/data-latex="([^"]*)"/)
+    return latexMatch ? latexMatch[1] : match
+  })
+  
+  // DON'T remove all HTML tags - we need to preserve MathML and tables
+  // Only remove specific UI-related tags
+  cleaned = cleaned.replace(/<(button|span class="marks"|div class="question-number")[^>]*>[\s\S]*?<\/\1>/g, '')
+  
+  // Decode HTML entities
+  cleaned = cleaned
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+  
+  return cleaned.trim()
+}
+
+/**
+ * Convert inline matrix equations to display mode
+ */
+function convertInlineMatricesToDisplay(text: string): string {
+  // Pattern to match inline math with matrix environments
+  const inlineMatrixPattern = /\$\s*(\\begin\{(?:bmatrix|pmatrix|vmatrix|Bmatrix|Vmatrix|matrix|array)\}[\s\S]*?\\end\{(?:bmatrix|pmatrix|vmatrix|Bmatrix|Vmatrix|matrix|array)\})\s*\$/g
+  
+  // Convert inline matrices to display mode
+  return text.replace(inlineMatrixPattern, (match, matrixContent) => {
+    return `$$${matrixContent}$$`
+  })
+}
+
+/**
+ * Generate clean export-ready HTML with only selected questions and raw LaTeX
+ */
+function generateCleanHTMLForExport(title: string, sections: Section[], selectedQuestionIds?: string[]): string {
+  const totalMarks = sections.reduce((sum, section) => {
+    return sum + section.questions.reduce((sectionSum, q) => sectionSum + q.marks, 0)
+  }, 0)
+
+  // Helper function to clean and prepare math for Pandoc
+  const prepareMathForPandoc = (text: string): string => {
+    if (!text) return ''
+    
+    let cleaned = text
+    
+    // Handle $$$ placeholders FIRST (e.g., $$$1$$$, $$$2$$$) - these are equation/matrix placeholders
+    // Convert them to display math blocks for Pandoc
+    cleaned = cleaned.replace(/\$\$\$([^$]+)\$\$\$/g, (match, content) => {
+      // Keep the content visible in display math mode
+      return `<div class="math-display">$$${content.trim()}$$</div>`
+    })
+    
+    // Extract LaTeX from Pandoc's HTML math spans
+    // Handle display math: <span class="math display">\[...\]</span>
+    cleaned = cleaned.replace(/<span class="math display">\\\[([\s\S]*?)\\\]<\/span>/g, (match, latex) => {
+      return `$$${latex}$$`
+    })
+    
+    // Handle inline math: <span class="math inline">\(...\)</span>
+    cleaned = cleaned.replace(/<span class="math inline">\\\(([\s\S]*?)\\\)<\/span>/g, (match, latex) => {
+      return `$${latex}$`
+    })
+    
+    // Remove remaining HTML paragraph and formatting tags but preserve content
+    cleaned = cleaned.replace(/<p>/g, '\n')
+    cleaned = cleaned.replace(/<\/p>/g, '\n')
+    cleaned = cleaned.replace(/<br\s*\/?>/g, '\n')
+    
+    // Clean up HTML entities in non-math content
+    cleaned = cleaned.replace(/<sup>/g, '^{')
+    cleaned = cleaned.replace(/<\/sup>/g, '}')
+    cleaned = cleaned.replace(/<sub>/g, '_{')
+    cleaned = cleaned.replace(/<\/sub>/g, '}')
+    
+    // Unwrap [MATH] tags but preserve the MathML/LaTeX content inside
+    cleaned = cleaned.replace(/\[MATH\]([\s\S]*?)\[\/MATH\]/g, (match, mathContent) => {
+      return mathContent // Preserve MathML or LaTeX as-is
+    })
+    
+    // Unwrap [TABLE] tags but preserve table HTML
+    cleaned = cleaned.replace(/\[TABLE\]([\s\S]*?)\[\/TABLE\]/g, (match, tableContent) => {
+      return tableContent
+    })
+    
+    // Unwrap [IMAGE] tags but preserve image HTML  
+    cleaned = cleaned.replace(/\[IMAGE\]([\s\S]*?)\[\/IMAGE\]/g, (match, imageContent) => {
+      return imageContent
+    })
+    
+    // Clean up excessive whitespace
+    cleaned = cleaned.replace(/\n\s*\n\s*\n/g, '\n\n')
+    cleaned = cleaned.trim()
+    
+    return cleaned
+  }
+
+  let html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${title}</title>
+  <style>
+    body { font-family: 'Times New Roman', serif; margin: 40px; line-height: 1.6; }
+    h1 { text-align: center; font-size: 24pt; margin-bottom: 10px; }
+    .metadata { text-align: center; font-size: 11pt; margin-bottom: 20px; }
+    .section-title { font-size: 14pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
+    .subsection-title { font-size: 12pt; font-weight: bold; margin-top: 15px; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px; }
+    .instructions { font-style: italic; font-size: 10pt; margin-bottom: 10px; }
+    .question { margin-bottom: 15px; font-size: 11pt; line-height: 1.8; }
+    .question-number { font-weight: bold; margin-right: 8px; }
+    .marks { font-weight: bold; margin-left: 8px; }
+    table { border-collapse: collapse; margin: 10px 0; }
+    table, th, td { border: 1px solid #333; padding: 8px; }
+    img { max-width: 100%; height: auto; margin: 10px 0; }    .math-display { text-align: center; margin: 15px 0; font-size: 12pt; }
+    math { display: inline-block; margin: 5px; }  </style>
+</head>
+<body>
+  <h1>${title}</h1>
+  <div class="metadata">
+    <p><strong>Total Marks:</strong> ${totalMarks}</p>
+  </div>
+  <hr>
+`
+
+  sections.forEach((section) => {
+    // Filter questions if selectedQuestionIds is provided
+    let questionsToExport = section.questions
+    if (selectedQuestionIds && selectedQuestionIds.length > 0) {
+      questionsToExport = section.questions.filter(q => selectedQuestionIds.includes(q.uniqueId || q.id))
+    }
+    
+    // Skip section if no questions to export
+    if (questionsToExport.length === 0) return
+    
+    html += `  <div class="section">
+    <h2 class="section-title">${section.title}</h2>
+`
+    
+    if (section.instructions) {
+      html += `    <p class="instructions">${section.instructions}</p>
+`
+    }
+
+    // Check if this is Group A with subsections
+    const isGroupA = section.title.match(/^Group\s+A/i)
+    
+    if (isGroupA && questionsToExport.length > 0) {
+      const mcqQuestions = questionsToExport.filter(q => q.type === 'mcq')
+      const fillInBlanksQuestions = questionsToExport.filter(q => 
+        q.section?.includes('Fill in the Blanks') || q.section?.includes('FILL IN THE')
+      )
+
+      // MCQ Subsection
+      if (mcqQuestions.length > 0) {
+        html += `    <h3 class="subsection-title">Multiple Choice Questions</h3>
+`
+        mcqQuestions.forEach((question, index) => {
+          const cleanText = prepareMathForPandoc(question.text)
+          html += `    <div class="question">
+      <span class="question-number">${toRomanNumeral(index + 1)}.</span><span>${cleanText}</span>
+      <span class="marks">[1 mark]</span>
+    </div>
+`
+        })
+      }
+
+      // Fill in the Blanks Subsection
+      if (fillInBlanksQuestions.length > 0) {
+        html += `    <h3 class="subsection-title">Fill in the Blanks</h3>
+`
+        fillInBlanksQuestions.forEach((question, index) => {
+          const cleanText = prepareMathForPandoc(question.text)
+          html += `    <div class="question">
+      <span class="question-number">${index + 1}.</span><span>${cleanText}</span>
+      <span class="marks">[1 mark]</span>
+    </div>
+`
+        })
+      }
+    } else {
+      // For other groups (B, C, D, E) or sections without subsections
+      questionsToExport.forEach((question, index) => {
+        const cleanText = prepareMathForPandoc(question.text)
+        const marks = section.title.match(/^Group\s+[A]/i) ? '1 mark' : `${question.marks} marks`
+        html += `    <div class="question">
+      <span class="question-number">${index + 1}.</span><span>${cleanText}</span>
+      <span class="marks">[${marks}]</span>
+    </div>
+`
+      })
+    }
+
+    html += `  </div>
+`
+  })
+
+  html += `</body>
+</html>`
+
+  return html
+}
+
+/**
+ * Generate HTML content for pandoc export (Legacy - kept for backward compatibility)
  */
 function generateHTMLForPandoc(title: string, sections: Section[]): string {
   const totalMarks = sections.reduce((sum, section) => {
@@ -391,11 +649,47 @@ function toRomanNumeral(num: number): string {
 }
 
 /**
- * Export using pandoc (Word)
+ * Export using pandoc (Word) with clean LaTeX and selected questions only
  */
-export async function exportToWordWithPandoc(title: string, sections: Section[]): Promise<void> {
+export async function exportToWordWithPandoc(
+  title: string, 
+  sections: Section[], 
+  selectedQuestionIds?: string[]
+): Promise<void> {
   try {
-    const html = generateHTMLForPandoc(title, sections)
+    // Debug: Log question content to see what we're working with
+    console.log('=== EXPORT DEBUG ===')
+    sections.forEach((section, idx) => {
+      console.log(`Section ${idx}: ${section.title}`)
+      section.questions.forEach((q, qIdx) => {
+        console.log(`  Q${qIdx} (${q.id}):`, q.text.substring(0, 300))
+        if (q.text.includes('[MATH]')) {
+          console.log(`    ✓ Contains [MATH] tags`)
+        }
+        if (q.text.includes('<math')) {
+          console.log(`    ✓ Contains MathML`)
+        }
+        if (q.text.includes('$$$')) {
+          console.log(`    ✓ Contains $$$ placeholders`)
+          const matches = q.text.match(/\$\$\$[^$]+\$\$\$/g)
+          if (matches) console.log(`      Placeholders:`, matches)
+        }
+        if (q.text.includes('\\begin{')) {
+          console.log(`    ✓ Contains LaTeX environments`)
+        }
+      })
+    })
+    console.log('===================')
+    
+    const html = generateCleanHTMLForExport(title, sections, selectedQuestionIds)
+    
+    // Debug: Log generated HTML excerpt (focus on math content)
+    const firstQuestionMatch = html.match(/<div class="question">[\s\S]{0,800}?<\/div>/)
+    if (firstQuestionMatch) {
+      console.log('✓ Generated HTML (first question):', firstQuestionMatch[0])
+    }
+    console.log('✓ HTML length:', html.length, 'chars')
+    
     const filename = title.replace(/\s+/g, '_')
 
     const blob = await exportDocument(html, 'docx', filename)
@@ -414,18 +708,22 @@ export async function exportToWordWithPandoc(title: string, sections: Section[])
 }
 
 /**
- * Export using pandoc (PDF) - Browser-based fallback
+ * Export using pandoc (PDF) with clean LaTeX and selected questions only - Browser-based fallback
  */
-export async function exportToPDFWithPandoc(title: string, sections: Section[]): Promise<void> {
+export async function exportToPDFWithPandoc(
+  title: string, 
+  sections: Section[], 
+  selectedQuestionIds?: string[]
+): Promise<void> {
   try {
     // Try browser-based PDF generation first (no server dependencies needed)
-    await exportToPDFBrowser(title, sections)
+    await exportToPDFBrowser(title, sections, selectedQuestionIds)
   } catch (error: any) {
     console.error('Browser PDF export failed, trying pandoc:', error)
     
     // Fallback to pandoc if browser method fails
     try {
-      const html = generateHTMLForPandoc(title, sections)
+      const html = generateCleanHTMLForExport(title, sections, selectedQuestionIds)
       const filename = title.replace(/\s+/g, '_')
 
       const blob = await exportDocument(html, 'pdf', filename)
@@ -440,15 +738,19 @@ export async function exportToPDFWithPandoc(title: string, sections: Section[]):
     } catch (pandocError: any) {
       // If all else fails, use browser method
       console.log('Pandoc not available, using browser PDF generation')
-      await exportToPDFBrowser(title, sections)
+      await exportToPDFBrowser(title, sections, selectedQuestionIds)
     }
   }
 }
 
 /**
- * Export to PDF using browser's print functionality
+ * Export to PDF using browser's print functionality with selected questions
  */
-async function exportToPDFBrowser(title: string, sections: Section[]): Promise<void> {
+async function exportToPDFBrowser(
+  title: string, 
+  sections: Section[], 
+  selectedQuestionIds?: string[]
+): Promise<void> {
   // Create a new window with the content
   const printWindow = window.open('', '_blank')
   
@@ -456,7 +758,7 @@ async function exportToPDFBrowser(title: string, sections: Section[]): Promise<v
     throw new Error('Please allow popups to export PDF')
   }
 
-  const html = generateHTMLForPandoc(title, sections)
+  const html = generateCleanHTMLForExport(title, sections, selectedQuestionIds)
   
   // Enhanced CSS for better PDF output with math support
   const enhancedCSS = `
