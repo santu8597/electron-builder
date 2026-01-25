@@ -355,30 +355,19 @@ function generateCleanHTMLForExport(title: string, sections: Section[], selected
     // Convert them to display math blocks for Pandoc
     cleaned = cleaned.replace(/\$\$\$([^$]+)\$\$\$/g, (match, content) => {
       // Keep the content visible in display math mode
-      return `<div class="math-display">$$${content.trim()}$$</div>`
+      return `<p class="math-display">$$${content.trim()}$$</p>`
     })
     
-    // Extract LaTeX from Pandoc's HTML math spans
-    // Handle display math: <span class="math display">\[...\]</span>
+    // Extract LaTeX from Pandoc's HTML math spans - but keep the structure
+    // Handle display math: <span class="math display">\[...\]</span> -> keep as display block
     cleaned = cleaned.replace(/<span class="math display">\\\[([\s\S]*?)\\\]<\/span>/g, (match, latex) => {
-      return `$$${latex}$$`
+      return `<p class="math-display">$$${latex}$$</p>`
     })
     
-    // Handle inline math: <span class="math inline">\(...\)</span>
+    // Handle inline math: <span class="math inline">\(...\)</span> -> convert to $...$
     cleaned = cleaned.replace(/<span class="math inline">\\\(([\s\S]*?)\\\)<\/span>/g, (match, latex) => {
       return `$${latex}$`
     })
-    
-    // Remove remaining HTML paragraph and formatting tags but preserve content
-    cleaned = cleaned.replace(/<p>/g, '\n')
-    cleaned = cleaned.replace(/<\/p>/g, '\n')
-    cleaned = cleaned.replace(/<br\s*\/?>/g, '\n')
-    
-    // Clean up HTML entities in non-math content
-    cleaned = cleaned.replace(/<sup>/g, '^{')
-    cleaned = cleaned.replace(/<\/sup>/g, '}')
-    cleaned = cleaned.replace(/<sub>/g, '_{')
-    cleaned = cleaned.replace(/<\/sub>/g, '}')
     
     // Unwrap [MATH] tags but preserve the MathML/LaTeX content inside
     cleaned = cleaned.replace(/\[MATH\]([\s\S]*?)\[\/MATH\]/g, (match, mathContent) => {
@@ -395,9 +384,8 @@ function generateCleanHTMLForExport(title: string, sections: Section[], selected
       return imageContent
     })
     
-    // Clean up excessive whitespace
+    // Clean up excessive whitespace (but preserve single line breaks)
     cleaned = cleaned.replace(/\n\s*\n\s*\n/g, '\n\n')
-    cleaned = cleaned.trim()
     
     return cleaned
   }
@@ -408,19 +396,23 @@ function generateCleanHTMLForExport(title: string, sections: Section[], selected
   <meta charset="UTF-8">
   <title>${title}</title>
   <style>
-    body { font-family: 'Times New Roman', serif; margin: 40px; line-height: 1.6; }
+    body { font-family: 'Times New Roman', serif; margin: 40px; line-height: 1.6; font-size: 14pt; }
     h1 { text-align: center; font-size: 24pt; margin-bottom: 10px; }
-    .metadata { text-align: center; font-size: 11pt; margin-bottom: 20px; }
-    .section-title { font-size: 14pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
-    .subsection-title { font-size: 12pt; font-weight: bold; margin-top: 15px; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px; }
-    .instructions { font-style: italic; font-size: 10pt; margin-bottom: 10px; }
-    .question { margin-bottom: 15px; font-size: 11pt; line-height: 1.8; }
+    .metadata { text-align: center; font-size: 12pt; margin-bottom: 20px; }
+    .section-title { font-size: 16pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
+    .subsection-title { font-size: 14pt; font-weight: bold; margin-top: 15px; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px; }
+    .instructions { font-style: italic; font-size: 12pt; margin-bottom: 10px; }
+    .question { margin-bottom: 15px; line-height: 1.8; }
     .question-number { font-weight: bold; margin-right: 8px; }
     .marks { font-weight: bold; margin-left: 8px; }
-    table { border-collapse: collapse; margin: 10px 0; }
+    p { margin: 8px 0; line-height: 1.6; }
+    table { border-collapse: collapse; margin: 10px 0; width: 100%; }
     table, th, td { border: 1px solid #333; padding: 8px; }
-    img { max-width: 100%; height: auto; margin: 10px 0; }    .math-display { text-align: center; margin: 15px 0; font-size: 12pt; }
-    math { display: inline-block; margin: 5px; }  </style>
+    img { max-width: 100%; height: auto; display: block; margin: 10px auto; }
+    .math-display { text-align: center; margin: 15px 0; font-size: 14pt; }
+    math { display: inline-block; margin: 5px; }
+    sup, sub { font-size: 0.8em; }
+  </style>
 </head>
 <body>
   <h1>${title}</h1>
