@@ -76,12 +76,13 @@ function createWindow() {
     height: 900,
     minWidth: 800,
     minHeight: 600,
+    title: 'PaperKraft',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
     },
-    icon: path.join(__dirname, '../public/icon.png'),
+    icon: path.join(__dirname, '../public/image.png'),
   });
 
   // In development, load from Next.js dev server

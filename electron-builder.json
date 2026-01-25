@@ -1,6 +1,6 @@
 {
-  "appId": "com.electron.myv0project",
-  "productName": "My V0 Project",
+  "appId": "com.paperkraft.app",
+  "productName": "PaperKraft",
   "directories": {
     "output": "dist"
   },

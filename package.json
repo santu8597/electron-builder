@@ -1,6 +1,7 @@
 {
-  "name": "my-v0-project",
-  "version": "0.1.0",
+  "name": "paperkraft",
+  "productName": "PaperKraft",
+  "version": "1.0.0",
   "private": true,
   "main": "electron/main.js",
   "scripts": {

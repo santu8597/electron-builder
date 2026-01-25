@@ -31,8 +31,8 @@ export default function Header({ draftTitle, setDraftTitle, onSaveDraft, onExpor
         <div className="flex items-center gap-4 flex-1">
           <div className="flex items-center justify-center w-10 h-10 rounded-lg overflow-hidden">
             <img 
-              src="/Screenshot 2026-01-20 013115.png" 
-              alt="Logo" 
+              src="/image.png" 
+              alt="PaperKraft Logo" 
               className="w-full h-full object-contain"
             />
           </div>
