@@ -82,7 +82,7 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
     },
-    icon: path.join(__dirname, '../public/image.png'),
+    icon: path.join(__dirname, '../public/transparent_bg.png'),
   });
 
   // In development, load from Next.js dev server
