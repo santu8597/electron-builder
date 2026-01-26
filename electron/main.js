@@ -81,9 +81,17 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
+      sandbox: true,
+      webSecurity: true,
     },
     icon: path.join(__dirname, '../public/image.png'),
+    contentProtection: true, // Disable screenshots and screen recording
   });
+
+  // Set window flag to prevent screen capture (Windows-specific)
+  if (process.platform === 'win32') {
+    mainWindow.setContentProtection(true);
+  }
 
   // In development, load from Next.js dev server
   // In production, load from Next.js exported static files
@@ -100,6 +108,24 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Set Content Security Policy
+  const { session } = require('electron');
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self';",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
+          "style-src 'self' 'unsafe-inline';",
+          "img-src 'self' data: https:;",
+          "font-src 'self' data:;",
+          "connect-src 'self' http://localhost:* ws://localhost:*;"
+        ].join(' ')
+      }
+    });
+  });
+
   createWindow();
 
   app.on('activate', () => {
