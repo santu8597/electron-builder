@@ -185,23 +185,36 @@ export function parseMCQQuestions(contentHtmlArray: string[], sectionIndex: numb
   
   let currentMCQ: Partial<ParsedQuestion> | null = null
   let questionCounter = 0
+  let preQuestionContent: string[] = [] // Collect content before first question
   
   for (const element of allElements) {
-    // Handle tables - add to current question
-    if (element.tagName === 'TABLE' && currentMCQ) {
-      currentMCQ.text = (currentMCQ.text || '') + '\n\n' + element.outerHTML + '\n'
+    // Handle tables - add to current question or collect if no question yet
+    if (element.tagName === 'TABLE') {
+      if (currentMCQ) {
+        currentMCQ.text = (currentMCQ.text || '') + '\n\n' + element.outerHTML + '\n'
+      } else {
+        preQuestionContent.push(element.outerHTML)
+      }
       continue
     }
     
-    // Handle images - add to current question
-    if (element.tagName === 'IMG' && currentMCQ) {
-      currentMCQ.text = (currentMCQ.text || '') + '\n' + element.outerHTML + '\n'
+    // Handle images - add to current question or collect if no question yet
+    if (element.tagName === 'IMG') {
+      if (currentMCQ) {
+        currentMCQ.text = (currentMCQ.text || '') + '\n' + element.outerHTML + '\n'
+      } else {
+        preQuestionContent.push(element.outerHTML)
+      }
       continue
     }
     
-    // Handle figure/image containers
-    if (element.tagName === 'FIGURE' && currentMCQ) {
-      currentMCQ.text = (currentMCQ.text || '') + '\n' + element.outerHTML + '\n'
+    // Handle figure/image containers - add to current question or collect if no question yet
+    if (element.tagName === 'FIGURE') {
+      if (currentMCQ) {
+        currentMCQ.text = (currentMCQ.text || '') + '\n' + element.outerHTML + '\n'
+      } else {
+        preQuestionContent.push(element.outerHTML)
+      }
       continue
     }
     
@@ -242,12 +255,19 @@ export function parseMCQQuestions(contentHtmlArray: string[], sectionIndex: numb
           mcqs.push(mcq)
         }
         
-        // Create new MCQ - remove roman numeral from innerHTML and wrap in <p>
+        // Create new MCQ - remove roman numeral from innerHTML
         const cleanedInnerHTML = element.innerHTML.replace(romanPattern, '')
-        const modifiedHtml = `<p>${cleanedInnerHTML}</p>`
+        
+        // If this is the first question and we have pre-question content (images, tables), add it
+        let initialText = cleanedInnerHTML + '\n'
+        if (questionCounter === 0 && preQuestionContent.length > 0) {
+          initialText = preQuestionContent.join('\n') + '\n' + initialText
+          preQuestionContent = [] // Clear after using
+        }
+        
         currentMCQ = {
           displayNumber: romanMatch[1],
-          text: modifiedHtml + '\n',
+          text: initialText,
           marks: 1,
           type: 'mcq'
         }
@@ -320,23 +340,36 @@ export function parseFillInBlanksQuestions(contentHtmlArray: string[], sectionIn
   const numberPattern = /^(\d+)\.\s*/
   let questionCounter = 0
   let currentQuestion: Partial<ParsedQuestion> | null = null
+  let preQuestionContent: string[] = [] // Collect content before first question
   
   for (const element of allElements) {
-    // Handle tables - add to current question
-    if (element.tagName === 'TABLE' && currentQuestion) {
-      currentQuestion.text = (currentQuestion.text || '') + '\n\n' + element.outerHTML + '\n'
+    // Handle tables - add to current question or collect if no question yet
+    if (element.tagName === 'TABLE') {
+      if (currentQuestion) {
+        currentQuestion.text = (currentQuestion.text || '') + '\n\n' + element.outerHTML + '\n'
+      } else {
+        preQuestionContent.push(element.outerHTML)
+      }
       continue
     }
     
-    // Handle images - add to current question
-    if (element.tagName === 'IMG' && currentQuestion) {
-      currentQuestion.text = (currentQuestion.text || '') + '\n' + element.outerHTML + '\n'
+    // Handle images - add to current question or collect if no question yet
+    if (element.tagName === 'IMG') {
+      if (currentQuestion) {
+        currentQuestion.text = (currentQuestion.text || '') + '\n' + element.outerHTML + '\n'
+      } else {
+        preQuestionContent.push(element.outerHTML)
+      }
       continue
     }
     
-    // Handle figure/image containers
-    if (element.tagName === 'FIGURE' && currentQuestion) {
-      currentQuestion.text = (currentQuestion.text || '') + '\n' + element.outerHTML + '\n'
+    // Handle figure/image containers - add to current question or collect if no question yet
+    if (element.tagName === 'FIGURE') {
+      if (currentQuestion) {
+        currentQuestion.text = (currentQuestion.text || '') + '\n' + element.outerHTML + '\n'
+      } else {
+        preQuestionContent.push(element.outerHTML)
+      }
       continue
     }
     
@@ -360,17 +393,23 @@ export function parseFillInBlanksQuestions(contentHtmlArray: string[], sectionIn
         }
         
         questionCounter++
-        // Remove the number from innerHTML and wrap in <p>
+        // Remove the number from innerHTML
         const cleanedInnerHTML = element.innerHTML.replace(numberPattern, '')
-        const modifiedHtml = `<p>${cleanedInnerHTML}</p>`
         const uniqueId = `A-fib-s${sectionIndex}-q${questionCounter}`
+        
+        // If this is the first question and we have pre-question content (images, tables), add it
+        let initialText = cleanedInnerHTML
+        if (questionCounter === 1 && preQuestionContent.length > 0) {
+          initialText = preQuestionContent.join('\n') + '\n' + initialText
+          preQuestionContent = [] // Clear after using
+        }
         
         currentQuestion = {
           id: `q-${Date.now()}-${sectionIndex}-${questionCounter}`,
           uniqueId,
           number: questionCounter,
           displayNumber: numberMatch[1],
-          text: modifiedHtml,
+          text: initialText,
           marks: 1,
           type: 'short',
           section: 'Fill in the Blanks'

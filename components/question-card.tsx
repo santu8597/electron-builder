@@ -110,6 +110,38 @@ export default function QuestionCard({
 }: QuestionCardProps) {
   const contentRef = useRef<HTMLDivElement>(null)
 
+  // Function to render content with question number prepended
+  function renderContentWithNumber(text: string, questionNumber: string) {
+    if (!text || text.trim() === '') {
+      return (
+        <>
+          <span className="font-semibold">{questionNumber} </span>
+          <span className="text-neutral-gray italic">No content</span>
+        </>
+      )
+    }
+    
+    // Check if the text contains HTML tags (likely from pandoc conversion)
+    if (text.includes('<') && text.includes('>')) {
+      // Prepend question number to the HTML content
+      const contentWithNumber = `<span class="font-semibold">${questionNumber} </span>${text}`
+      return (
+        <div 
+          className="prose prose-sm max-w-none question-html-content"
+          dangerouslySetInnerHTML={{ __html: contentWithNumber }}
+        />
+      )
+    }
+    
+    // For plain text, render with question number inline
+    return (
+      <>
+        <span className="font-semibold">{questionNumber} </span>
+        {renderContent(text)}
+      </>
+    )
+  }
+
   // Function to render content with proper HTML support
   function renderContent(text: string) {
     if (!text || text.trim() === '') {
@@ -120,7 +152,7 @@ export default function QuestionCard({
     if (text.includes('<') && text.includes('>')) {
       return (
         <div 
-          className="prose prose-sm max-w-none question-html-content"
+          className="prose prose-sm max-w-none question-html-content inline"
           dangerouslySetInnerHTML={{ __html: text }}
         />
       )
@@ -210,24 +242,9 @@ export default function QuestionCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground mb-2">
-                {question.displayNumber ? 
-                  question.displayNumber : 
-                  `Q${question.number}.`
-                }
-              </p>
               <div className="text-sm text-foreground leading-relaxed question-content" ref={contentRef}>
-                {renderContent(question.text)}
+                {renderContentWithNumber(question.text, question.displayNumber || `Q${question.number}.`)}
               </div>
-              {/* Display difficulty level information */}
-              {(question.courseOutcome || question.bloomsLevel || question.questionType) && (
-                <div className="mt-2 p-2 bg-green-50 rounded text-xs">
-                  <span className="font-semibold">Assessment Details: </span>
-                  {question.courseOutcome && <span className="mr-2">({question.courseOutcome})</span>}
-                  {question.bloomsLevel && <span className="mr-2">({question.bloomsLevel}</span>}
-                  {question.questionType && <span>/{question.questionType})</span>}
-                </div>
-              )}
             </div>
             <span className="text-xs font-medium text-white bg-primary px-2 py-1 rounded whitespace-nowrap flex-shrink-0">
               {question.marks} marks
