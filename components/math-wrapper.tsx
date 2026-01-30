@@ -11,9 +11,12 @@ declare global {
 
 export default function MathWrapper({ children }: { children: React.ReactNode }) {
   useEffect(() => {
+    console.log('MathWrapper mounted, checking for KaTeX...')
+    
     // Create global render function
     window.renderAllMath = () => {
       if (window.renderMathInElement) {
+        console.log('Rendering math...')
         window.renderMathInElement(document.body, {
           delimiters: [
             {left: '$$', right: '$$', display: true},
@@ -23,6 +26,9 @@ export default function MathWrapper({ children }: { children: React.ReactNode })
           ],
           throwOnError: false
         })
+        console.log('Math rendering complete')
+      } else {
+        console.warn('renderMathInElement not available')
       }
     }
 
@@ -30,10 +36,15 @@ export default function MathWrapper({ children }: { children: React.ReactNode })
     let attempts = 0
     const tryRender = () => {
       attempts++
+      console.log(`Attempt ${attempts} to render math...`)
       if (window.renderMathInElement) {
+        console.log('KaTeX found, rendering...')
         window.renderAllMath()
-      } else if (attempts < 20) {
-        setTimeout(tryRender, 200)
+      } else if (attempts < 50) {
+        console.log('KaTeX not ready, retrying...')
+        setTimeout(tryRender, 300)
+      } else {
+        console.error('Failed to load KaTeX after 50 attempts')
       }
     }
     
@@ -43,7 +54,10 @@ export default function MathWrapper({ children }: { children: React.ReactNode })
     let timeoutId: NodeJS.Timeout
     const observer = new MutationObserver(() => {
       clearTimeout(timeoutId)
-      timeoutId = setTimeout(() => window.renderAllMath?.(), 300)
+      timeoutId = setTimeout(() => {
+        console.log('Content changed, re-rendering math...')
+        window.renderAllMath?.()
+      }, 300)
     })
 
     observer.observe(document.body, {
