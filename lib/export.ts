@@ -295,9 +295,21 @@ function extractRawLatex(text: string): string {
     return tableContent
   })
   
-  // Handle [IMAGE]...[/IMAGE] tags - preserve image HTML
+  // Handle [IMAGE]...[/IMAGE] tags - preserve image HTML with dimensions locked
   cleaned = cleaned.replace(/\[IMAGE\]([\s\S]*?)\[\/IMAGE\]/g, (match, imageContent) => {
-    return imageContent
+    return imageContent.replace(/<img([^>]*?)>/gi, (imgTag, attrs) => {
+      const widthMatch = attrs.match(/width=["']?(\d+)["']?/i)
+      const heightMatch = attrs.match(/height=["']?(\d+)["']?/i)
+      
+      if (widthMatch && heightMatch) {
+        const width = widthMatch[1]
+        const height = heightMatch[1]
+        let newAttrs = attrs.replace(/style=["'][^"']*["']/gi, '').trim()
+        newAttrs += ` style="width:${width}px !important;height:${height}px !important;max-width:${width}px;max-height:${height}px;"`
+        return `<img${newAttrs}>`
+      }
+      return imgTag
+    })
   })
   
   // Remove KaTeX-generated HTML (spans with katex classes)
@@ -379,9 +391,28 @@ function generateCleanHTMLForExport(title: string, sections: Section[], selected
       return tableContent
     })
     
-    // Unwrap [IMAGE] tags but preserve image HTML  
+    // Unwrap [IMAGE] tags and ensure dimensions are preserved for Pandoc
     cleaned = cleaned.replace(/\[IMAGE\]([\s\S]*?)\[\/IMAGE\]/g, (match, imageContent) => {
-      return imageContent
+      // Keep width/height attributes and ensure they're not overridden by CSS
+      return imageContent.replace(/<img([^>]*?)>/gi, (imgTag, attrs) => {
+        const widthMatch = attrs.match(/width=["']?(\d+)["']?/i)
+        const heightMatch = attrs.match(/height=["']?(\d+)["']?/i)
+        
+        if (widthMatch && heightMatch) {
+          const width = widthMatch[1]
+          const height = heightMatch[1]
+          
+          // Remove any existing style attribute
+          let newAttrs = attrs.replace(/style=["'][^"']*["']/gi, '').trim()
+          
+          // Keep the width and height attributes for Pandoc, and add explicit style
+          // Use both px for browsers and explicit dimensions for Pandoc
+          newAttrs += ` style="width:${width}px !important;height:${height}px !important;max-width:${width}px;max-height:${height}px;"`
+          
+          return `<img${newAttrs}>`
+        }
+        return imgTag
+      })
     })
     
     // Clean up excessive whitespace (but preserve single line breaks)
@@ -408,7 +439,7 @@ function generateCleanHTMLForExport(title: string, sections: Section[], selected
     p { margin: 8px 0; line-height: 1.6; }
     table { border-collapse: collapse; margin: 10px 0; width: 100%; }
     table, th, td { border: 1px solid #333; padding: 8px; }
-    img { max-width: 100%; height: auto; display: block; margin: 10px auto; }
+    img { display: block; margin: 10px auto; }
     .math-display { text-align: center; margin: 15px 0; font-size: 14pt; }
     math { display: inline-block; margin: 5px; }
     sup, sub { font-size: 0.8em; }
@@ -646,37 +677,8 @@ export async function exportToWordWithPandoc(
 ): Promise<void> {
   try {
     // Debug: Log question content to see what we're working with
-    console.log('=== EXPORT DEBUG ===')
-    sections.forEach((section, idx) => {
-      console.log(`Section ${idx}: ${section.title}`)
-      section.questions.forEach((q, qIdx) => {
-        console.log(`  Q${qIdx} (${q.id}):`, q.text.substring(0, 300))
-        if (q.text.includes('[MATH]')) {
-          console.log(`    ✓ Contains [MATH] tags`)
-        }
-        if (q.text.includes('<math')) {
-          console.log(`    ✓ Contains MathML`)
-        }
-        if (q.text.includes('$$$')) {
-          console.log(`    ✓ Contains $$$ placeholders`)
-          const matches = q.text.match(/\$\$\$[^$]+\$\$\$/g)
-          if (matches) console.log(`      Placeholders:`, matches)
-        }
-        if (q.text.includes('\\begin{')) {
-          console.log(`    ✓ Contains LaTeX environments`)
-        }
-      })
-    })
-    console.log('===================')
     
     const html = generateCleanHTMLForExport(title, sections, selectedQuestionIds)
-    
-    // Debug: Log generated HTML excerpt (focus on math content)
-    const firstQuestionMatch = html.match(/<div class="question">[\s\S]{0,800}?<\/div>/)
-    if (firstQuestionMatch) {
-      console.log('✓ Generated HTML (first question):', firstQuestionMatch[0])
-    }
-    console.log('✓ HTML length:', html.length, 'chars')
     
     const filename = title.replace(/\s+/g, '_')
 
@@ -725,7 +727,6 @@ export async function exportToPDFWithPandoc(
       URL.revokeObjectURL(url)
     } catch (pandocError: any) {
       // If all else fails, use browser method
-      console.log('Pandoc not available, using browser PDF generation')
       await exportToPDFBrowser(title, sections, selectedQuestionIds)
     }
   }

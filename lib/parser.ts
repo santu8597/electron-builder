@@ -16,14 +16,12 @@ async function convertDocxToHtml(file: File): Promise<string> {
   // Try using Electron API or server-side conversion first (supports pandoc)
   try {
     const result = await convertDocx(file);
-    console.log(`Document converted using: ${result.method}`);
     return result.html;
   } catch (error) {
     console.warn('Server/Electron conversion failed, using client-side fallback:', error);
   }
 
   // Fallback to client-side mammoth conversion
-  console.log('Using client-side mammoth conversion')
   try {
     const mammoth = (await import("mammoth")).default
     const arrayBuffer = await file.arrayBuffer()
@@ -51,7 +49,6 @@ async function convertDocxToHtml(file: File): Promise<string> {
       ]
     })
     
-    console.log('Client-side mammoth conversion successful')
     return result.value
   } catch (error) {
     console.error('Client-side mammoth conversion failed:', error)
@@ -61,7 +58,6 @@ async function convertDocxToHtml(file: File): Promise<string> {
       const mammoth = (await import("mammoth")).default
       const arrayBuffer = await file.arrayBuffer()
       const result = await mammoth.extractRawText({ arrayBuffer })
-      console.log('Fallback to raw text extraction successful')
       return `<div>${result.value.replace(/\n/g, '<br>')}</div>`
     } catch (textError) {
       console.error('All conversion methods failed:', textError)
@@ -99,18 +95,15 @@ function parseHtmlContent(html: string): Section[] {
           // Group A uses MCQ or Fill in the Blanks format with roman numerals
           // Use the dedicated Group A parser functions
           if (module.title.includes('Fill in the Blanks') || module.title.includes('FILL IN THE')) {
-            console.log(`Parsing ${group.group} - ${module.title} as Fill in the Blanks`)
             questions = addGroupToQuestions(parseFillInBlanksQuestions(module.content, sections.length), group.group)
             instructions = 'Fill in the blanks with appropriate answers'
           } else {
-            // MCQ format with roman numerals  
-            console.log(`Parsing ${group.group} - ${module.title} as MCQ with roman numerals`)
+            // MCQ format with roman numerals
             questions = addGroupToQuestions(parseMCQQuestions(module.content, sections.length), group.group)
             instructions = 'Multiple Choice Questions - Choose the correct alternative'
           }
         } else {
           // Other groups use regular format
-          console.log(`Parsing ${group.group} - ${module.title} as Regular Questions`)
           questions = addGroupToQuestions(parseRegularQuestions(module.content, sections.length), group.group)
         }
         
@@ -120,18 +113,15 @@ function parseHtmlContent(html: string): Section[] {
           questions,
           ...(instructions && { instructions })
         }
-        console.log(`  Created section with ${questions.length} questions`)
         sections.push(section)
       }
     } else if (group.content) {
       // Group has direct content (no modules)
-      console.log(`Parsing ${group.group} as direct content (${group.content.length} blocks)`)
       const section: Section = {
         id: `section-${sections.length}`,
         title: group.group,
         questions: addGroupToQuestions(parseRegularQuestions(group.content, sections.length), group.group)
       }
-      console.log(`  ${group.group} parsed: ${section.questions.length} questions`)
       
       sections.push(section)
     }
@@ -198,9 +188,7 @@ function parseGroupStructure(doc: Document): GroupData[] {
         
         // Check for GROUP heading (handles all formats: GROUP – A, GROUP B, GROUP-C, etc.)
         if (text.match(/^GROUP\s*[–-]?\s*[A-E]/i) || text.startsWith('GROUP')) {
-          console.log(`Found group: ${text}`)
           if (currentGroup) {
-            console.log(`  Pushing previous group with ${currentGroup.modules?.length || 0} modules`)
             result.push(currentGroup)
           }
           
@@ -213,7 +201,6 @@ function parseGroupStructure(doc: Document): GroupData[] {
         
         // Check for MODULE heading
         if (text.startsWith('Module')) {
-          console.log(`  Found module: ${text}`)
           if (currentGroup) {
             if (!currentGroup.modules) {
               currentGroup.modules = []
@@ -257,15 +244,8 @@ function parseGroupStructure(doc: Document): GroupData[] {
   
   // Push the last group
   if (currentGroup) {
-    console.log(`  Pushing last group with ${currentGroup.modules?.length || 0} modules`)
     result.push(currentGroup)
   }
-  
-  console.log(`Total groups found: ${result.length}`)
-  result.forEach((g, i) => {
-    console.log(`  Group ${i}: ${g.group} - ${g.modules?.length || 0} modules, ${g.content?.length || 0} direct content blocks`)
-  })
-  console.log(`=== End Group Structure Parsing ===\n`)
   
   return result
 }
@@ -432,7 +412,6 @@ function parseFillInBlanks(contentHtmlArray: string[], sectionIndex: number): Pa
     // Show first 15 elements
     allElements.slice(0, 15).forEach((el, i) => {
       const text = el.textContent?.trim().substring(0, 100) || ''
-      console.log(`  ${i}: ${el.tagName} - "${text}"`)
     })
   }
 

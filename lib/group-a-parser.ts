@@ -156,10 +156,6 @@ export function parseGroupA(html: string): Section[] {
  * Preserves HTML including images, tables, math
  */
 export function parseMCQQuestions(contentHtmlArray: string[], sectionIndex: number): ParsedQuestion[] {
-  console.log('📦 MCQ contentHtmlArray has', contentHtmlArray.length, 'items')
-  console.log('First item:', contentHtmlArray[0]?.substring(0, 200))
-  console.log('Second item:', contentHtmlArray[1]?.substring(0, 200))
-  
   const contentHtml = contentHtmlArray.join('\n')
   
   const parser = new DOMParser()
@@ -170,18 +166,13 @@ export function parseMCQQuestions(contentHtmlArray: string[], sectionIndex: numb
   // Unwrap nested divs/sections if content is wrapped
   let allElements = Array.from(doc.body.children)
   
-  console.log('🔍 Before unwrap:', allElements.length, 'elements, first tag:', allElements[0]?.tagName)
-  
   // If we only have 1 element and it's a container, unwrap it
   if (allElements.length === 1 && ['DIV', 'SECTION', 'BLOCKQUOTE'].includes(allElements[0].tagName)) {
-    console.log('🔓 Unwrapping container:', allElements[0].tagName, 'has', allElements[0].children.length, 'children')
     allElements = Array.from(allElements[0].children)
   }
   
   const romanPattern = /^\(([ivxlcdm]+)\)\s*/i
   const optionPattern = /^\(([a-d])\)\s*/i
-  
-  console.log('🔍 MCQ Parser: Processing', allElements.length, 'elements')
   
   let currentMCQ: Partial<ParsedQuestion> | null = null
   let questionCounter = 0
@@ -225,7 +216,6 @@ export function parseMCQQuestions(contentHtmlArray: string[], sectionIndex: numb
       // Check options FIRST (before roman numerals, since 'c' and 'd' contain roman chars)
       const optionMatch = text.match(optionPattern)
       if (optionMatch && currentMCQ) {
-        console.log('Option matched:', text.substring(0, 50))
         // Keep the option marker (a), (b), etc. in the HTML
         currentMCQ.text = (currentMCQ.text || '') + '\n' + element.outerHTML
         continue
@@ -315,8 +305,6 @@ export function parseMCQQuestions(contentHtmlArray: string[], sectionIndex: numb
  * Preserves HTML including images, tables, math
  */
 export function parseFillInBlanksQuestions(contentHtmlArray: string[], sectionIndex: number): ParsedQuestion[] {
-  console.log('📦 Fill-in-Blanks contentHtmlArray has', contentHtmlArray.length, 'items')
-  
   const contentHtml = contentHtmlArray.join('\n')
   const parser = new DOMParser()
   const doc = parser.parseFromString(contentHtml, 'text/html')
@@ -326,15 +314,10 @@ export function parseFillInBlanksQuestions(contentHtmlArray: string[], sectionIn
   // Unwrap nested containers if content is wrapped
   let allElements = Array.from(doc.body.children)
   
-  console.log('🔍 Fill-in-Blanks Before unwrap:', allElements.length, 'elements, first tag:', allElements[0]?.tagName)
-  
   // If we only have 1 element and it's a container, unwrap it
   if (allElements.length === 1 && ['DIV', 'SECTION', 'BLOCKQUOTE'].includes(allElements[0].tagName)) {
-    console.log('🔓 Fill-in-Blanks Unwrapping container:', allElements[0].tagName, 'has', allElements[0].children.length, 'children')
     allElements = Array.from(allElements[0].children)
   }
-  
-  console.log('🔍 Fill-in-Blanks Processing', allElements.length, 'elements')
   
   // Fill-in-blanks use numbered format: 1., 2., 3., etc.
   const numberPattern = /^(\d+)\.\s*/
