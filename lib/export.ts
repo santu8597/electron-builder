@@ -396,11 +396,11 @@ function generateCleanHTMLForExport(title: string, sections: Section[], selected
   <meta charset="UTF-8">
   <title>${title}</title>
   <style>
-    body { font-family: 'Times New Roman', serif; margin: 40px; line-height: 1.6; font-size: 14pt; }
-    h1 { text-align: center; font-size: 24pt; margin-bottom: 10px; }
+    body { font-family: 'Cambria', serif; margin: 40px; line-height: 1.6; font-size: 14pt; }
+    h1 { font-family: 'Cambria', serif; text-align: center; font-size: 24pt; margin-bottom: 10px; }
     .metadata { text-align: center; font-size: 12pt; margin-bottom: 20px; }
-    .section-title { font-size: 16pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
-    .subsection-title { font-size: 14pt; font-weight: bold; margin-top: 15px; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px; }
+    .section-title { font-family: 'Cambria', serif; font-size: 16pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
+    .subsection-title { font-family: 'Cambria', serif; font-size: 14pt; font-weight: bold; margin-top: 15px; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px; }
     .instructions { font-style: italic; font-size: 12pt; margin-bottom: 10px; }
     .question { margin-bottom: 15px; line-height: 1.8; }
     .question-number { font-weight: bold; margin-right: 8px; }
@@ -458,7 +458,6 @@ function generateCleanHTMLForExport(title: string, sections: Section[], selected
           const cleanText = prepareMathForPandoc(question.text)
           html += `    <div class="question">
       <span class="question-number">${toRomanNumeral(index + 1)}.</span><span>${cleanText}</span>
-      <span class="marks">[1 mark]</span>
     </div>
 `
         })
@@ -472,7 +471,6 @@ function generateCleanHTMLForExport(title: string, sections: Section[], selected
           const cleanText = prepareMathForPandoc(question.text)
           html += `    <div class="question">
       <span class="question-number">${index + 1}.</span><span>${cleanText}</span>
-      <span class="marks">[1 mark]</span>
     </div>
 `
         })
@@ -523,11 +521,11 @@ function generateHTMLForPandoc(title: string, sections: Section[]): string {
   <meta charset="UTF-8">
   <title>${title}</title>
   <style>
-    body { font-family: 'Times New Roman', serif; margin: 40px; line-height: 1.6; }
-    h1 { text-align: center; font-size: 24pt; margin-bottom: 10px; }
+    body { font-family: 'Cambria', serif; margin: 40px; line-height: 1.6; }
+    h1 { font-family: 'Cambria', serif; text-align: center; font-size: 24pt; margin-bottom: 10px; }
     .metadata { text-align: center; font-size: 11pt; margin-bottom: 20px; }
-    .section-title { font-size: 14pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
-    .subsection-title { font-size: 12pt; font-weight: bold; margin-top: 15px; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px; }
+    .section-title { font-family: 'Cambria', serif; font-size: 14pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
+    .subsection-title { font-family: 'Cambria', serif; font-size: 12pt; font-weight: bold; margin-top: 15px; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px; }
     .instructions { font-style: italic; font-size: 10pt; margin-bottom: 10px; }
     .question { margin-bottom: 15px; font-size: 11pt; line-height: 1.8; }
     .question-number { font-weight: bold; margin-right: 8px; }
@@ -572,7 +570,6 @@ function generateHTMLForPandoc(title: string, sections: Section[]): string {
           const cleanText = convertMathForPandoc(question.text)
           html += `    <div class="question">
       <span class="question-number">${toRomanNumeral(index + 1)}.</span><span>${cleanText}</span>
-      <span class="marks">[1 mark]</span>
     </div>
 `
         })
@@ -586,7 +583,6 @@ function generateHTMLForPandoc(title: string, sections: Section[]): string {
           const cleanText = convertMathForPandoc(question.text)
           html += `    <div class="question">
       <span class="question-number">${index + 1}.</span><span>${cleanText}</span>
-      <span class="marks">[1 mark]</span>
     </div>
 `
         })
@@ -760,12 +756,13 @@ async function exportToPDFBrowser(
         margin: 20mm;
       }
       body { 
-        font-family: 'Times New Roman', serif; 
+        font-family: 'Cambria', serif; 
         font-size: 12pt;
         line-height: 1.8;
         color: #000;
       }
       h1 { 
+        font-family: 'Cambria', serif;
         text-align: center; 
         font-size: 20pt; 
         margin-bottom: 10px;
@@ -777,6 +774,7 @@ async function exportToPDFBrowser(
         margin-bottom: 20px; 
       }
       .section-title { 
+        font-family: 'Cambria', serif;
         font-size: 14pt; 
         font-weight: bold; 
         margin-top: 20px; 
@@ -785,6 +783,7 @@ async function exportToPDFBrowser(
         page-break-after: avoid;
       }
       .subsection-title { 
+        font-family: 'Cambria', serif;
         font-size: 12pt; 
         font-weight: bold; 
         margin-top: 15px; 
