@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,6 +11,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 
 interface InstructionDialogProps {
   open: boolean
@@ -18,6 +21,8 @@ interface InstructionDialogProps {
 }
 
 export default function InstructionDialog({ open, onAccept, onCancel }: InstructionDialogProps) {
+  const [accepted, setAccepted] = useState(false)
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent className="max-w-xl">
@@ -47,9 +52,26 @@ export default function InstructionDialog({ open, onAccept, onCancel }: Instruct
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
+        <div className="flex items-center space-x-2 px-6 pb-4">
+          <Checkbox 
+            id="terms" 
+            checked={accepted}
+            onCheckedChange={(checked) => setAccepted(checked === true)}
+          />
+          <Label 
+            htmlFor="terms" 
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+          >
+            I accept all terms and conditions
+          </Label>
+        </div>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onCancel}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onAccept} className="bg-blue-600 hover:bg-blue-700">
+          <AlertDialogAction 
+            onClick={onAccept} 
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+            disabled={!accepted}
+          >
             Accept
           </AlertDialogAction>
         </AlertDialogFooter>
