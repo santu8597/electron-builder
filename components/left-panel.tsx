@@ -12,9 +12,19 @@ interface LeftPanelProps {
   parsedContent: Section[]
   setParsedContent: (content: Section[]) => void
   setSelectedQuestions: (questions: ParsedQuestion[]) => void
+  selectedQuestions?: ParsedQuestion[]
+  paperSections?: Section[]
+  setPaperSections?: (sections: Section[]) => void
 }
 
-export default function LeftPanel({ parsedContent, setParsedContent, setSelectedQuestions }: LeftPanelProps) {
+export default function LeftPanel({ 
+  parsedContent, 
+  setParsedContent, 
+  setSelectedQuestions,
+  selectedQuestions = [],
+  paperSections = [],
+  setPaperSections
+}: LeftPanelProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [uploadedFileName, setUploadedFileName] = useState("")
@@ -187,9 +197,82 @@ export default function LeftPanel({ parsedContent, setParsedContent, setSelected
                       ⚠️ No questions found in this section. Check console for debug logs.
                     </div>
                   ) : (
-                    section.questions.map((question) => (
-                      <QuestionCard key={question.id} question={question} isDraggable={true} />
-                    ))
+                    section.questions.map((question) => {
+                      // Check if this question is already in any section on the right panel
+                      const isSelected = paperSections.some(sec => 
+                        sec.questions.some(q => q.uniqueId === question.uniqueId || q.id === question.id)
+                      )
+                      
+                      return (
+                        <QuestionCard 
+                          key={question.id} 
+                          question={question} 
+                          isDraggable={true}
+                          isSelected={isSelected}
+                          onToggleSelect={(selected) => {
+                            if (selected && setPaperSections) {
+                              // Determine target section based on question type and group
+                              let targetSectionId: string
+                              let targetSectionTitle: string
+                              
+                              // Check if question is MCQ or Fill in the Blanks
+                              const isMCQorFillBlanks = question.type === 'mcq' || 
+                                                        section.title?.toLowerCase().includes('fill') ||
+                                                        section.title?.toLowerCase().includes('blank')
+                              
+                              if (isMCQorFillBlanks) {
+                                // All MCQs and Fill in the Blanks go to Group A regardless of module
+                                targetSectionId = 'group-a'
+                                targetSectionTitle = 'GROUP A - MCQs and Fill in the Blanks'
+                              } else {
+                                // Other questions maintain their original section structure
+                                targetSectionId = section.id
+                                targetSectionTitle = section.title
+                              }
+                              
+                              const existingSection = paperSections.find(s => s.id === targetSectionId)
+                              
+                              if (existingSection) {
+                                // Add to existing section
+                                const updatedSections = paperSections.map(s => 
+                                  s.id === targetSectionId
+                                    ? { ...s, questions: [...s.questions, question] }
+                                    : s
+                                )
+                                setPaperSections(updatedSections)
+                              } else {
+                                // Create new section
+                                const newSection: Section = {
+                                  id: targetSectionId,
+                                  title: targetSectionTitle,
+                                  instructions: isMCQorFillBlanks ? 'Answer all questions' : section.instructions,
+                                  questions: [question]
+                                }
+                                setPaperSections([...paperSections, newSection])
+                              }
+                              
+                              // Also update selectedQuestions
+                              setSelectedQuestions([...selectedQuestions, question])
+                            } else if (!selected && setPaperSections) {
+                              // Remove question from right panel
+                              const updatedSections = paperSections.map(sec => ({
+                                ...sec,
+                                questions: sec.questions.filter(q => 
+                                  q.uniqueId !== question.uniqueId && q.id !== question.id
+                                )
+                              })).filter(sec => sec.questions.length > 0) // Remove empty sections
+                              
+                              setPaperSections(updatedSections)
+                              
+                              // Also update selectedQuestions
+                              setSelectedQuestions(selectedQuestions.filter(q => 
+                                q.uniqueId !== question.uniqueId && q.id !== question.id
+                              ))
+                            }
+                          }}
+                        />
+                      )
+                    })
                   )}
                 </div>
               </div>

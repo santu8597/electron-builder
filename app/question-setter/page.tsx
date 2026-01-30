@@ -100,6 +100,9 @@ export default function QuestionSetterPage() {
           parsedContent={parsedContent}
           setParsedContent={setParsedContent}
           setSelectedQuestions={setSelectedQuestions}
+          selectedQuestions={selectedQuestions}
+          paperSections={paperSections}
+          setPaperSections={setPaperSections}
         />
         <RightPanel 
           selectedQuestions={selectedQuestions}

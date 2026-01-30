@@ -9,6 +9,8 @@ interface QuestionCardProps {
   isDraggable?: boolean
   onEdit?: () => void
   onDelete?: () => void
+  isSelected?: boolean
+  onToggleSelect?: (selected: boolean) => void
 }
 
 // Declare MathJax type
@@ -98,7 +100,14 @@ function MathRenderer({ content }: { content: string }) {
   )
 }
 
-export default function QuestionCard({ question, isDraggable = false, onEdit, onDelete }: QuestionCardProps) {
+export default function QuestionCard({ 
+  question, 
+  isDraggable = true, 
+  onEdit, 
+  onDelete,
+  isSelected = false,
+  onToggleSelect
+}: QuestionCardProps) {
   const contentRef = useRef<HTMLDivElement>(null)
 
   // Function to render content with proper HTML support
@@ -185,6 +194,17 @@ export default function QuestionCard({ question, isDraggable = false, onEdit, on
       }}
     >
       <div className="flex gap-3">
+        {/* Checkbox for selection */}
+        {isDraggable && onToggleSelect && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => onToggleSelect(e.target.checked)}
+            className="w-4 h-4 mt-1 flex-shrink-0 cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
+        
         {isDraggable && <GripVertical className="w-5 h-5 text-neutral-gray flex-shrink-0 mt-0.5" />}
 
         <div className="flex-1 min-w-0">
