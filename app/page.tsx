@@ -1,107 +1,25 @@
 "use client"
 
-import { useState } from "react"
-import Header from "@/components/header"
-import LeftPanel from "@/components/left-panel"
-import RightPanel from "@/components/right-panel"
-import { exportToPDFWithPandoc, exportToWordWithPandoc } from "@/lib/export"
-
-// Declare MathJax type
-declare global {
-  interface Window {
-    MathJax?: {
-      typesetPromise?: (elements?: HTMLElement[]) => Promise<void>
-      typeset?: (elements?: HTMLElement[]) => void
-      startup?: {
-        promise?: Promise<void>
-      }
-    }
-  }
-}
-
-export interface ParsedQuestion {
-  id: string
-  uniqueId: string
-  number: number
-  text: string
-  marks: number
-  type: "short" | "long" | "mcq"
-  section?: string
-  group?: string
-  displayNumber?: string
-  marksDistribution?: string
-  courseOutcome?: string
-  bloomsLevel?: string
-  questionType?: string
-}
-
-export interface Section {
-  id: string
-  title: string
-  instructions?: string
-  questions: ParsedQuestion[]
-}
-
-export interface QuestionPaper {
-  id: string
-  title: string
-  totalMarks: number
-  sections: Section[]
-  instructions?: string
-}
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 
 export default function Home() {
-  const [parsedContent, setParsedContent] = useState<Section[]>([])
-  const [selectedQuestions, setSelectedQuestions] = useState<ParsedQuestion[]>([])
-  const [paperSections, setPaperSections] = useState<Section[]>([])
-  const [draftTitle, setDraftTitle] = useState("Question Paper")
+  const router = useRouter()
 
-  const handleExportPDF = async () => {
-    try {
-      // Extract unique IDs from selected questions
-      const selectedIds = selectedQuestions.map(q => q.uniqueId || q.id)
-      await exportToPDFWithPandoc(draftTitle, paperSections, selectedIds)
-    } catch (error: any) {
-      alert(error.message || 'Failed to export to PDF')
+  useEffect(() => {
+    // Redirect to login page on app launch
+    const isAuthenticated = localStorage.getItem("isAuthenticated")
+    
+    if (isAuthenticated) {
+      router.push("/dashboard")
+    } else {
+      router.push("/login")
     }
-  }
-
-  const handleExportWord = async () => {
-    try {
-      // Extract unique IDs from selected questions
-      const selectedIds = selectedQuestions.map(q => q.uniqueId || q.id)
-      await exportToWordWithPandoc(draftTitle, paperSections, selectedIds)
-    } catch (error: any) {
-      alert(error.message || 'Failed to export to Word')
-    }
-  }
+  }, [router])
 
   return (
-    <div className="h-screen bg-background overflow-hidden flex flex-col">
-      <Header 
-        draftTitle={draftTitle} 
-        setDraftTitle={setDraftTitle}
-        onExportPDF={handleExportPDF}
-        onExportWord={handleExportWord}
-      />
-
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Panel - Document Parser */}
-        <LeftPanel
-          parsedContent={parsedContent}
-          setParsedContent={setParsedContent}
-          setSelectedQuestions={setSelectedQuestions}
-        />
-
-        {/* Right Panel - Question Paper Builder */}
-        <RightPanel
-          selectedQuestions={selectedQuestions}
-          setSelectedQuestions={setSelectedQuestions}
-          paperSections={paperSections}
-          setPaperSections={setPaperSections}
-          draftTitle={draftTitle}
-        />
-      </div>
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
     </div>
   )
 }
