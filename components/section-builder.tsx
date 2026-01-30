@@ -99,24 +99,45 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
 
       // Extract group letter from section title (e.g., "Group A" -> "A")
       const sectionGroup = section.title.replace(/^Group\s+/i, '').trim()
-      const questionGroup = question.group || question.section?.replace(/^Group\s+/i, '').trim() || ''
-
-      // Validate that question belongs to this group
-      if (questionGroup && sectionGroup !== questionGroup) {
-        // Show native error dialog
+      
+      // Determine if this is an MCQ or Fill in Blanks question
+      const isMCQorFillBlanks = question.type === 'mcq' || 
+                                question.section?.toLowerCase().includes('fill') ||
+                                question.section?.toLowerCase().includes('blank')
+      
+      // MCQs and Fill in Blanks should only go to Group A
+      if (isMCQorFillBlanks && sectionGroup !== 'A') {
         showErrorDialog(
-          `Cannot add Group ${questionGroup} question to ${section.title}`,
-          'Please drag questions only to their respective groups.'
+          'MCQs and Fill in the Blanks must go to Group A',
+          'Please drag MCQ and Fill in the Blanks questions to Group A only.'
         )
         
-        // Show visual feedback for invalid drop
         const element = e.currentTarget as HTMLElement
-        element.style.backgroundColor = '#fee2e2' // red-100
+        element.style.backgroundColor = '#fee2e2'
         setTimeout(() => {
           element.style.backgroundColor = ''
         }, 500)
-        console.warn(`Cannot add question from Group ${questionGroup} to Group ${sectionGroup}`)
         return
+      }
+      
+      // For non-MCQ questions, validate group matching
+      if (!isMCQorFillBlanks) {
+        const questionGroup = question.group || question.section?.replace(/^Group\s+/i, '').trim() || ''
+        
+        if (questionGroup && sectionGroup !== questionGroup) {
+          showErrorDialog(
+            `Cannot add Group ${questionGroup} question to ${section.title}`,
+            'Please drag questions only to their respective groups.'
+          )
+          
+          const element = e.currentTarget as HTMLElement
+          element.style.backgroundColor = '#fee2e2'
+          setTimeout(() => {
+            element.style.backgroundColor = ''
+          }, 500)
+          console.warn(`Cannot add question from Group ${questionGroup} to Group ${sectionGroup}`)
+          return
+        }
       }
 
       // Check if question already exists in ANY group using uniqueId (prevent duplicates across all groups)

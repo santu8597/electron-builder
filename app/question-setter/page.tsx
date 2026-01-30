@@ -68,7 +68,8 @@ export default function QuestionSetterPage() {
   const handleExportPDF = async () => {
     setIsExporting(true)
     try {
-      await exportToPDFWithPandoc(questionPaper)
+      const selectedIds = selectedQuestions.map(q => q.uniqueId || q.id)
+      await exportToPDFWithPandoc(draftTitle, paperSections, selectedIds)
     } catch (error) {
       console.error("Export to PDF failed:", error)
     } finally {
@@ -79,7 +80,8 @@ export default function QuestionSetterPage() {
   const handleExportWord = async () => {
     setIsExporting(true)
     try {
-      await exportToWordWithPandoc(questionPaper)
+      const selectedIds = selectedQuestions.map(q => q.uniqueId || q.id)
+      await exportToWordWithPandoc(draftTitle, paperSections, selectedIds)
     } catch (error) {
       console.error("Export to Word failed:", error)
     } finally {
