@@ -335,9 +335,22 @@ async function convertWithMammoth(fileBuffer) {
     }, {
       convertImage: mammoth.images.imgElement(function(image) {
         return image.read("base64").then(function(imageBuffer) {
-          return {
+          const attributes = {
             src: "data:" + image.contentType + ";base64," + imageBuffer
           };
+          
+          // Preserve original dimensions from DOCX
+          // Mammoth provides width/height in EMUs (English Metric Units)
+          // 1 inch = 914400 EMUs, 1 inch = 96 pixels (standard screen DPI)
+          // So: pixels = EMUs / 9525
+          if (image.width) {
+            attributes.width = Math.round(image.width / 9525);
+          }
+          if (image.height) {
+            attributes.height = Math.round(image.height / 9525);
+          }
+          
+          return attributes;
         }).catch(() => {
           return { src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" };
         });
@@ -364,7 +377,17 @@ async function exportWithPandoc(html, format, filename) {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'export-'));
   const inputFile = path.join(tempDir, 'input.html');
   const outputFile = path.join(tempDir, `output.${format}`);
-
+// Log a sample of the HTML to see image tags
+    const imgMatches = html.match(/<img[^>]*>/g);
+    if (imgMatches) {
+      console.log('=== IMAGE TAGS IN EXPORT HTML ===');
+      imgMatches.forEach((img, idx) => {
+        console.log(`Image ${idx + 1}:`, img.substring(0, 200));
+      });
+      console.log('================================');
+    }
+    
+    
   try {
     fs.writeFileSync(inputFile, html, 'utf-8');
 
@@ -389,7 +412,8 @@ async function exportWithPandoc(html, format, filename) {
         );
       }
     } else if (format === 'docx') {
-      await execAsync(`pandoc "${inputFile}" -f html+tex_math_dollars -t docx -o "${outputFile}" --mathml`);
+      // Use --dpi=96 to ensure Pandoc uses standard screen DPI for image conversion
+      await execAsync(`pandoc "${inputFile}" -f html+tex_math_dollars -t docx -o "${outputFile}" --mathml --dpi=96`);
     } else {
       throw new Error('Unsupported format. Use "pdf" or "docx"');
     }

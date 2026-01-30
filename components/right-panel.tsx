@@ -118,20 +118,16 @@ export default function RightPanel({
         const cos = extractAllCOsFromQuestion(q)
         
         if (cos.length > 0) {
-          console.log('✅ Found COs:', cos.join(', '), 'in question', q.displayNumber || q.number)
           // Count each CO found in the question
           cos.forEach(co => {
             if (counts[co] !== undefined) {
               counts[co] = counts[co] + 1
             }
           })
-        } else {
-          console.log('❌ No CO found in question', q.displayNumber || q.number)
         }
       })
     })
 
-    console.log('📊 Final CO counts:', counts)
     setCoCounts(counts)
   }, [paperSections])
 
