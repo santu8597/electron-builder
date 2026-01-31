@@ -2,6 +2,59 @@ import type { Section } from "@/app/page"
 import { exportDocument } from "./electron-api"
 
 /**
+ * Convert blob URLs back to data URLs for export
+ * Blob URLs don't work outside the browser context, so we need to convert them back
+ */
+async function convertBlobUrlsToDataUrls(html: string): Promise<string> {
+  if (!html || !html.includes('blob:')) return html;
+  
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const images = doc.querySelectorAll('img[src^="blob:"]');
+  
+  // Convert all blob URLs to data URLs
+  const conversions = Array.from(images).map(async (img) => {
+    const blobUrl = img.getAttribute('src');
+    if (!blobUrl) return;
+    
+    try {
+      // Fetch the blob data
+      const response = await fetch(blobUrl);
+      const blob = await response.blob();
+      
+      // Convert blob to data URL
+      return new Promise<{ img: Element; dataUrl: string }>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (typeof reader.result === 'string') {
+            resolve({ img, dataUrl: reader.result });
+          } else {
+            reject(new Error('Failed to convert blob to data URL'));
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.warn('Failed to convert blob URL to data URL:', error);
+      return null;
+    }
+  });
+  
+  const results = await Promise.all(conversions);
+  
+  // Apply the conversions
+  results.forEach(result => {
+    if (result) {
+      result.img.setAttribute('src', result.dataUrl);
+      result.img.removeAttribute('data-blob-url');
+    }
+  });
+  
+  return doc.body.innerHTML;
+}
+
+/**
  * EXPORT STRATEGY (Updated Jan 2026):
  * 
  * The new clean export approach provides:
@@ -352,7 +405,7 @@ function convertInlineMatricesToDisplay(text: string): string {
 /**
  * Generate clean export-ready HTML with only selected questions and raw LaTeX
  */
-function generateCleanHTMLForExport(title: string, sections: Section[], selectedQuestionIds?: string[]): string {
+async function generateCleanHTMLForExport(title: string, sections: Section[], selectedQuestionIds?: string[]): Promise<string> {
   const totalMarks = sections.reduce((sum, section) => {
     return sum + section.questions.reduce((sectionSum, q) => sectionSum + q.marks, 0)
   }, 0)
@@ -453,7 +506,7 @@ function generateCleanHTMLForExport(title: string, sections: Section[], selected
   <hr>
 `
 
-  sections.forEach((section) => {
+  for (const section of sections) {
     // Filter questions if selectedQuestionIds is provided
     let questionsToExport = section.questions
     if (selectedQuestionIds && selectedQuestionIds.length > 0) {
@@ -461,7 +514,7 @@ function generateCleanHTMLForExport(title: string, sections: Section[], selected
     }
     
     // Skip section if no questions to export
-    if (questionsToExport.length === 0) return
+    if (questionsToExport.length === 0) continue
     
     html += `  <div class="section">
     <h2 class="section-title">${section.title}</h2>
@@ -485,26 +538,26 @@ function generateCleanHTMLForExport(title: string, sections: Section[], selected
       if (mcqQuestions.length > 0) {
         html += `    <h3 class="subsection-title">Multiple Choice Questions</h3>
 `
-        mcqQuestions.forEach((question, index) => {
+        for (const [index, question] of mcqQuestions.entries()) {
           const cleanText = prepareMathForPandoc(question.text)
           html += `    <div class="question">
       <span class="question-number">${toRomanNumeral(index + 1)}.</span><span>${cleanText}</span>
     </div>
 `
-        })
+        }
       }
 
       // Fill in the Blanks Subsection
       if (fillInBlanksQuestions.length > 0) {
         html += `    <h3 class="subsection-title">Fill in the Blanks</h3>
 `
-        fillInBlanksQuestions.forEach((question, index) => {
+        for (const [index, question] of fillInBlanksQuestions.entries()) {
           const cleanText = prepareMathForPandoc(question.text)
           html += `    <div class="question">
       <span class="question-number">${index + 1}.</span><span>${cleanText}</span>
     </div>
 `
-        })
+        }
       }
     } else {
       // For other groups (B, C, D, E) or sections without subsections
@@ -521,7 +574,7 @@ function generateCleanHTMLForExport(title: string, sections: Section[], selected
 
     html += `  </div>
 `
-  })
+  }
 
   html += `</body>
 </html>`
@@ -676,9 +729,16 @@ export async function exportToWordWithPandoc(
   selectedQuestionIds?: string[]
 ): Promise<void> {
   try {
-    // Debug: Log question content to see what we're working with
+    // Convert all blob URLs to data URLs in question text before generating HTML
+    const sectionsWithDataUrls = await Promise.all(sections.map(async (section) => ({
+      ...section,
+      questions: await Promise.all(section.questions.map(async (q) => ({
+        ...q,
+        text: await convertBlobUrlsToDataUrls(q.text)
+      })))
+    })));
     
-    const html = generateCleanHTMLForExport(title, sections, selectedQuestionIds)
+    const html = await generateCleanHTMLForExport(title, sectionsWithDataUrls, selectedQuestionIds)
     
     const filename = title.replace(/\s+/g, '_')
 
@@ -713,7 +773,16 @@ export async function exportToPDFWithPandoc(
     
     // Fallback to pandoc if browser method fails
     try {
-      const html = generateCleanHTMLForExport(title, sections, selectedQuestionIds)
+      // Convert blob URLs to data URLs before generating HTML
+      const sectionsWithDataUrls = await Promise.all(sections.map(async (section) => ({
+        ...section,
+        questions: await Promise.all(section.questions.map(async (q) => ({
+          ...q,
+          text: await convertBlobUrlsToDataUrls(q.text)
+        })))
+      })));
+      
+      const html = await generateCleanHTMLForExport(title, sectionsWithDataUrls, selectedQuestionIds)
       const filename = title.replace(/\s+/g, '_')
 
       const blob = await exportDocument(html, 'pdf', filename)

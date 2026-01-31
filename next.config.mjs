@@ -24,7 +24,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data: https://cdn.jsdelivr.net",
-              "connect-src 'self' http://localhost:* ws://localhost:*",
+              "connect-src 'self' blob: http://localhost:* ws://localhost:*",
             ].join('; '),
           },
         ],
