@@ -600,6 +600,7 @@ function parseRegularQuestions(contentHtmlArray: string[], sectionIndex: number)
   const questionPattern = /^(\d+)\.\s*/
   let questionCounter = 0
   let currentQuestion: Partial<ParsedQuestion> | null = null
+  let currentQuestionNumber = 0 // Track the current question number to detect subparts
   let preQuestionContent: string[] = [] // Collect content before first question
   
   for (let i = 0; i < allElements.length; i++) {
@@ -646,13 +647,28 @@ function parseRegularQuestions(contentHtmlArray: string[], sectionIndex: number)
       const questionMatch = text.match(questionPattern)
       
       if (questionMatch) {
+        const questionNumber = parseInt(questionMatch[1])
+        
+        // Check if this is actually a subpart (nested numbering like 45) a) 1))
+        // If the number is less than or equal to the current question number, it's a subpart
+        const isSubpart = currentQuestionNumber > 0 && questionNumber <= currentQuestionNumber
+        
+        if (isSubpart) {
+          // This is a subpart, not a new question - add it to current question
+          if (currentQuestion) {
+            const paragraphHtml = element.outerHTML;
+            currentQuestion.text = (currentQuestion.text || '') + '\n' + convertDataUrlsToBlobUrls(paragraphHtml)
+          }
+          continue
+        }
+        
         // Save previous question
         if (currentQuestion && currentQuestion.text) {
           questions.push(currentQuestion as ParsedQuestion)
         }
         
         questionCounter++
-        const questionNumber = parseInt(questionMatch[1])
+        currentQuestionNumber = questionNumber // Update current question number
         // Preserve HTML for question text
         const innerHTML = element.innerHTML.replace(questionPattern, '').trim()
         let marksData = extractMarks(innerHTML)
