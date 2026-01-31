@@ -22,6 +22,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta
+          httpEquiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' http://localhost:* ws://localhost:*;"
+        />
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"

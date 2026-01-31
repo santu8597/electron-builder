@@ -10,13 +10,78 @@ function generateUniqueQuestionId(group: string, sectionIndex: number, questionN
 }
 
 /**
+ * Convert base64 data URLs to blob URLs to avoid browser limitations
+ * This prevents ERR_INVALID_URL errors with large images
+ */
+function convertDataUrlsToBlobUrls(html: string): string {
+  if (typeof window === 'undefined') return html;
+  if (!html || !html.includes('data:image')) return html;
+  
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const images = doc.querySelectorAll('img[src^="data:"]');
+    
+    let convertedCount = 0;
+    images.forEach((img) => {
+      const dataUrl = img.getAttribute('src');
+      if (!dataUrl) return;
+      
+      // Convert all data URLs to blob URLs (not just large ones)
+      // This ensures consistency and avoids any URL length issues
+      try {
+        // Extract base64 data and content type
+        const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+        if (!matches) return;
+        
+        const contentType = matches[1];
+        const base64Data = matches[2];
+        
+        // Convert base64 to blob
+        const byteCharacters = atob(base64Data);
+        const byteArrays = [];
+        
+        for (let i = 0; i < byteCharacters.length; i += 512) {
+          const slice = byteCharacters.slice(i, i + 512);
+          const byteNumbers = new Array(slice.length);
+          for (let j = 0; j < slice.length; j++) {
+            byteNumbers[j] = slice.charCodeAt(j);
+          }
+          byteArrays.push(new Uint8Array(byteNumbers));
+        }
+        
+        const blob = new Blob(byteArrays, { type: contentType });
+        const blobUrl = URL.createObjectURL(blob);
+        
+        img.setAttribute('src', blobUrl);
+        img.setAttribute('data-original-size', base64Data.length.toString());
+        img.setAttribute('data-blob-url', 'true');
+        convertedCount++;
+      } catch (error) {
+        console.warn('Failed to convert image data URL to blob:', error);
+      }
+    });
+    
+    if (convertedCount > 0) {
+      console.log(`Converted ${convertedCount} image(s) from data URLs to blob URLs`);
+    }
+    
+    return doc.body.innerHTML;
+  } catch (error) {
+    console.error('Error in convertDataUrlsToBlobUrls:', error);
+    return html;
+  }
+}
+
+/**
  * Convert DOCX to HTML using browser-compatible methods
  */
 async function convertDocxToHtml(file: File): Promise<string> {
   // Try using Electron API or server-side conversion first (supports pandoc)
   try {
     const result = await convertDocx(file);
-    return result.html;
+    console.log('Converting image data URLs to blob URLs (server result)...');
+    return convertDataUrlsToBlobUrls(result.html);
   } catch (error) {
     console.warn('Server/Electron conversion failed, using client-side fallback:', error);
   }
@@ -49,7 +114,10 @@ async function convertDocxToHtml(file: File): Promise<string> {
       ]
     })
     
-    return result.value
+    // Convert all data URLs to blob URLs immediately after conversion
+    console.log('Converting image data URLs to blob URLs...');
+    const convertedHtml = convertDataUrlsToBlobUrls(result.value);
+    return convertedHtml
   } catch (error) {
     console.error('Client-side mammoth conversion failed:', error)
     
@@ -286,7 +354,8 @@ function parseMCQsFromDOM(contentHtmlArray: string[], sectionIndex: number): Par
     // Handle tables - add them to current question if exists
     if (element.tagName === 'TABLE') {
       if (currentMCQ) {
-        currentMCQ.text = (currentMCQ.text || '') + '\n\n' + element.outerHTML + '\n'
+        const tableHtml = element.outerHTML;
+        currentMCQ.text = (currentMCQ.text || '') + '\n\n' + convertDataUrlsToBlobUrls(tableHtml) + '\n'
       }
       continue
     }
@@ -294,7 +363,8 @@ function parseMCQsFromDOM(contentHtmlArray: string[], sectionIndex: number): Par
     // Handle images - add them to current question if exists
     if (element.tagName === 'IMG') {
       if (currentMCQ) {
-        currentMCQ.text = (currentMCQ.text || '') + '\n' + element.outerHTML + '\n'
+        const imgHtml = element.outerHTML;
+        currentMCQ.text = (currentMCQ.text || '') + '\n' + convertDataUrlsToBlobUrls(imgHtml) + '\n'
       }
       continue
     }
@@ -302,7 +372,8 @@ function parseMCQsFromDOM(contentHtmlArray: string[], sectionIndex: number): Par
     // Handle figure/image containers
     if (element.tagName === 'FIGURE') {
       if (currentMCQ) {
-        currentMCQ.text = (currentMCQ.text || '') + '\n' + element.outerHTML + '\n'
+        const figureHtml = element.outerHTML;
+        currentMCQ.text = (currentMCQ.text || '') + '\n' + convertDataUrlsToBlobUrls(figureHtml) + '\n'
       }
       continue
     }
@@ -357,7 +428,8 @@ function parseMCQsFromDOM(contentHtmlArray: string[], sectionIndex: number): Par
     if (currentMCQ && element.tagName !== 'P' && element.tagName !== 'TABLE' && element.tagName !== 'IMG' && element.tagName !== 'FIGURE') {
       // Add the element if it has meaningful content or children
       if (element.textContent?.trim() || element.querySelector('img, table')) {
-        currentMCQ.text = (currentMCQ.text || '') + '\n' + element.outerHTML + '\n'
+        const elementHtml = element.outerHTML;
+        currentMCQ.text = (currentMCQ.text || '') + '\n' + convertDataUrlsToBlobUrls(elementHtml) + '\n'
       }
     }
   }
@@ -423,7 +495,8 @@ function parseFillInBlanks(contentHtmlArray: string[], sectionIndex: number): Pa
     // Handle tables - add them to current question if exists
     if (element.tagName === 'TABLE') {
       if (currentQuestion) {
-        currentQuestion.text = (currentQuestion.text || '') + '\n\n' + element.outerHTML + '\n'
+        const tableHtml = element.outerHTML;
+        currentQuestion.text = (currentQuestion.text || '') + '\n\n' + convertDataUrlsToBlobUrls(tableHtml) + '\n'
       }
       continue
     }
@@ -431,7 +504,8 @@ function parseFillInBlanks(contentHtmlArray: string[], sectionIndex: number): Pa
     // Handle images - add them to current question if exists
     if (element.tagName === 'IMG') {
       if (currentQuestion) {
-        currentQuestion.text = (currentQuestion.text || '') + '\n' + element.outerHTML + '\n'
+        const imgHtml = element.outerHTML;
+        currentQuestion.text = (currentQuestion.text || '') + '\n' + convertDataUrlsToBlobUrls(imgHtml) + '\n'
       }
       continue
     }
@@ -439,7 +513,8 @@ function parseFillInBlanks(contentHtmlArray: string[], sectionIndex: number): Pa
     // Handle figure/image containers
     if (element.tagName === 'FIGURE') {
       if (currentQuestion) {
-        currentQuestion.text = (currentQuestion.text || '') + '\n' + element.outerHTML + '\n'
+        const figureHtml = element.outerHTML;
+        currentQuestion.text = (currentQuestion.text || '') + '\n' + convertDataUrlsToBlobUrls(figureHtml) + '\n'
       }
       continue
     }
@@ -531,30 +606,36 @@ function parseRegularQuestions(contentHtmlArray: string[], sectionIndex: number)
     const element = allElements[i]
     // Handle tables - add them to current question if exists, else collect
     if (element.tagName === 'TABLE') {
+      const tableHtml = element.outerHTML;
+      const converted = convertDataUrlsToBlobUrls(tableHtml);
       if (currentQuestion) {
-        currentQuestion.text = (currentQuestion.text || '') + '\n\n' + element.outerHTML + '\n'
+        currentQuestion.text = (currentQuestion.text || '') + '\n\n' + converted + '\n'
       } else {
-        preQuestionContent.push(element.outerHTML)
+        preQuestionContent.push(converted)
       }
       continue
     }
     
     // Handle images - add them to current question if exists, else collect
     if (element.tagName === 'IMG') {
+      const imgHtml = element.outerHTML;
+      const converted = convertDataUrlsToBlobUrls(imgHtml);
       if (currentQuestion) {
-        currentQuestion.text = (currentQuestion.text || '') + '\n' + element.outerHTML + '\n'
+        currentQuestion.text = (currentQuestion.text || '') + '\n' + converted + '\n'
       } else {
-        preQuestionContent.push(element.outerHTML)
+        preQuestionContent.push(converted)
       }
       continue
     }
     
     // Handle figure/image containers
     if (element.tagName === 'FIGURE') {
+      const figureHtml = element.outerHTML;
+      const converted = convertDataUrlsToBlobUrls(figureHtml);
       if (currentQuestion) {
-        currentQuestion.text = (currentQuestion.text || '') + '\n' + element.outerHTML + '\n'
+        currentQuestion.text = (currentQuestion.text || '') + '\n' + converted + '\n'
       } else {
-        preQuestionContent.push(element.outerHTML)
+        preQuestionContent.push(converted)
       }
       continue
     }
@@ -615,12 +696,13 @@ function parseRegularQuestions(contentHtmlArray: string[], sectionIndex: number)
       } else if (currentQuestion) {
         // Append HTML to current question - preserve full HTML structure with paragraph tags
         if (text || element.querySelector('img, table')) {
-          currentQuestion.text = (currentQuestion.text || '') + '\n' + element.outerHTML
+          const paragraphHtml = element.outerHTML;
+          currentQuestion.text = (currentQuestion.text || '') + '\n' + convertDataUrlsToBlobUrls(paragraphHtml)
         }
       } else if (!currentQuestion) {
         // Before first question - collect paragraphs with images/tables
         if (element.querySelector('img, table')) {
-          preQuestionContent.push(element.outerHTML)
+          preQuestionContent.push(convertDataUrlsToBlobUrls(element.outerHTML))
         }
       }
     }
@@ -628,7 +710,8 @@ function parseRegularQuestions(contentHtmlArray: string[], sectionIndex: number)
     // Handle any other HTML elements that might contain images/content
     if (currentQuestion && element.tagName !== 'P' && element.tagName !== 'TABLE' && element.tagName !== 'IMG' && element.tagName !== 'FIGURE') {
       if (element.textContent?.trim() || element.querySelector('img, table')) {
-        currentQuestion.text = (currentQuestion.text || '') + '\n' + element.outerHTML + '\n'
+        const elementHtml = element.outerHTML;
+        currentQuestion.text = (currentQuestion.text || '') + '\n' + convertDataUrlsToBlobUrls(elementHtml) + '\n'
       }
     } else if (!currentQuestion && element.tagName !== 'P') {
       // Collect non-paragraph elements before first question

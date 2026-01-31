@@ -110,6 +110,26 @@ export default function QuestionCard({
 }: QuestionCardProps) {
   const contentRef = useRef<HTMLDivElement>(null)
 
+  // Cleanup blob URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      // Find all blob URLs in the content and revoke them
+      if (contentRef.current) {
+        const images = contentRef.current.querySelectorAll('img[src^="blob:"]')
+        images.forEach((img) => {
+          const src = img.getAttribute('src')
+          if (src) {
+            try {
+              URL.revokeObjectURL(src)
+            } catch (error) {
+              // Ignore errors during cleanup
+            }
+          }
+        })
+      }
+    }
+  }, [])
+
   // Function to render content with question number prepended
   function renderContentWithNumber(text: string, questionNumber: string) {
     if (!text || text.trim() === '') {

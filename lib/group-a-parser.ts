@@ -13,6 +13,70 @@ interface GroupAModule {
 }
 
 /**
+ * Convert base64 data URLs to blob URLs to avoid browser limitations
+ * This prevents ERR_INVALID_URL errors with large images
+ */
+function convertDataUrlsToBlobUrls(html: string): string {
+  if (typeof window === 'undefined') return html;
+  if (!html || !html.includes('data:image')) return html;
+  
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const images = doc.querySelectorAll('img[src^="data:"]');
+    
+    let convertedCount = 0;
+    images.forEach((img) => {
+      const dataUrl = img.getAttribute('src');
+      if (!dataUrl) return;
+      
+      // Convert all data URLs to blob URLs (not just large ones)
+      // This ensures consistency and avoids any URL length issues
+      try {
+        // Extract base64 data and content type
+        const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+        if (!matches) return;
+        
+        const contentType = matches[1];
+        const base64Data = matches[2];
+        
+        // Convert base64 to blob
+        const byteCharacters = atob(base64Data);
+        const byteArrays = [];
+        
+        for (let i = 0; i < byteCharacters.length; i += 512) {
+          const slice = byteCharacters.slice(i, i + 512);
+          const byteNumbers = new Array(slice.length);
+          for (let j = 0; j < slice.length; j++) {
+            byteNumbers[j] = slice.charCodeAt(j);
+          }
+          byteArrays.push(new Uint8Array(byteNumbers));
+        }
+        
+        const blob = new Blob(byteArrays, { type: contentType });
+        const blobUrl = URL.createObjectURL(blob);
+        
+        img.setAttribute('src', blobUrl);
+        img.setAttribute('data-original-size', base64Data.length.toString());
+        img.setAttribute('data-blob-url', 'true');
+        convertedCount++;
+      } catch (error) {
+        console.warn('Failed to convert image data URL to blob:', error);
+      }
+    });
+    
+    if (convertedCount > 0) {
+      console.log(`Converted ${convertedCount} image(s) from data URLs to blob URLs`);
+    }
+    
+    return doc.body.innerHTML;
+  } catch (error) {
+    console.error('Error in convertDataUrlsToBlobUrls:', error);
+    return html;
+  }
+}
+
+/**
  * Extract difficulty level information from question text
  * Format: [(CO1)(Understand/LOCQ)] or similar patterns
  */
@@ -181,30 +245,36 @@ export function parseMCQQuestions(contentHtmlArray: string[], sectionIndex: numb
   for (const element of allElements) {
     // Handle tables - add to current question or collect if no question yet
     if (element.tagName === 'TABLE') {
+      const tableHtml = element.outerHTML;
+      const converted = convertDataUrlsToBlobUrls(tableHtml);
       if (currentMCQ) {
-        currentMCQ.text = (currentMCQ.text || '') + '\n\n' + element.outerHTML + '\n'
+        currentMCQ.text = (currentMCQ.text || '') + '\n\n' + converted + '\n'
       } else {
-        preQuestionContent.push(element.outerHTML)
+        preQuestionContent.push(converted)
       }
       continue
     }
     
     // Handle images - add to current question or collect if no question yet
     if (element.tagName === 'IMG') {
+      const imgHtml = element.outerHTML;
+      const convertedHtml = convertDataUrlsToBlobUrls(imgHtml);
       if (currentMCQ) {
-        currentMCQ.text = (currentMCQ.text || '') + '\n' + element.outerHTML + '\n'
+        currentMCQ.text = (currentMCQ.text || '') + '\n' + convertedHtml + '\n'
       } else {
-        preQuestionContent.push(element.outerHTML)
+        preQuestionContent.push(convertedHtml)
       }
       continue
     }
     
     // Handle figure/image containers - add to current question or collect if no question yet
     if (element.tagName === 'FIGURE') {
+      const figureHtml = element.outerHTML;
+      const convertedHtml = convertDataUrlsToBlobUrls(figureHtml);
       if (currentMCQ) {
-        currentMCQ.text = (currentMCQ.text || '') + '\n' + element.outerHTML + '\n'
+        currentMCQ.text = (currentMCQ.text || '') + '\n' + convertedHtml + '\n'
       } else {
-        preQuestionContent.push(element.outerHTML)
+        preQuestionContent.push(convertedHtml)
       }
       continue
     }
@@ -266,13 +336,13 @@ export function parseMCQQuestions(contentHtmlArray: string[], sectionIndex: numb
       
       // If paragraph doesn't match option or roman pattern, add it to current question
       if (currentMCQ) {
-        currentMCQ.text = (currentMCQ.text || '') + '\n' + element.outerHTML
+        currentMCQ.text = (currentMCQ.text || '') + '\n' + convertDataUrlsToBlobUrls(element.outerHTML)
       }
     }
     
     // Handle any other content that's not a paragraph (div, etc.)
     if (currentMCQ && element.tagName !== 'P') {
-      currentMCQ.text = (currentMCQ.text || '') + '\n' + element.outerHTML + '\n'
+      currentMCQ.text = (currentMCQ.text || '') + '\n' + convertDataUrlsToBlobUrls(element.outerHTML) + '\n'
     }
   }
   
@@ -328,30 +398,36 @@ export function parseFillInBlanksQuestions(contentHtmlArray: string[], sectionIn
   for (const element of allElements) {
     // Handle tables - add to current question or collect if no question yet
     if (element.tagName === 'TABLE') {
+      const tableHtml = element.outerHTML;
+      const converted = convertDataUrlsToBlobUrls(tableHtml);
       if (currentQuestion) {
-        currentQuestion.text = (currentQuestion.text || '') + '\n\n' + element.outerHTML + '\n'
+        currentQuestion.text = (currentQuestion.text || '') + '\n\n' + converted + '\n'
       } else {
-        preQuestionContent.push(element.outerHTML)
+        preQuestionContent.push(converted)
       }
       continue
     }
     
     // Handle images - add to current question or collect if no question yet
     if (element.tagName === 'IMG') {
+      const imgHtml = element.outerHTML;
+      const convertedHtml = convertDataUrlsToBlobUrls(imgHtml);
       if (currentQuestion) {
-        currentQuestion.text = (currentQuestion.text || '') + '\n' + element.outerHTML + '\n'
+        currentQuestion.text = (currentQuestion.text || '') + '\n' + convertedHtml + '\n'
       } else {
-        preQuestionContent.push(element.outerHTML)
+        preQuestionContent.push(convertedHtml)
       }
       continue
     }
     
     // Handle figure/image containers - add to current question or collect if no question yet
     if (element.tagName === 'FIGURE') {
+      const figureHtml = element.outerHTML;
+      const convertedHtml = convertDataUrlsToBlobUrls(figureHtml);
       if (currentQuestion) {
-        currentQuestion.text = (currentQuestion.text || '') + '\n' + element.outerHTML + '\n'
+        currentQuestion.text = (currentQuestion.text || '') + '\n' + convertedHtml + '\n'
       } else {
-        preQuestionContent.push(element.outerHTML)
+        preQuestionContent.push(convertedHtml)
       }
       continue
     }
@@ -403,7 +479,7 @@ export function parseFillInBlanksQuestions(contentHtmlArray: string[], sectionIn
     
     // Handle any other content that's not a paragraph
     if (currentQuestion && element.tagName !== 'P') {
-      currentQuestion.text = (currentQuestion.text || '') + '\n' + element.outerHTML + '\n'
+      currentQuestion.text = (currentQuestion.text || '') + '\n' + convertDataUrlsToBlobUrls(element.outerHTML) + '\n'
     }
   }
   
