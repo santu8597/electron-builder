@@ -12,22 +12,35 @@ async function convertBlobUrlsToDataUrls(html: string): Promise<string> {
   const doc = parser.parseFromString(html, 'text/html');
   const images = doc.querySelectorAll('img[src^="blob:"]');
   
-  // Convert all blob URLs to data URLs
+  console.log(`Found ${images.length} images with blob URLs to convert`);
+  
+  // Convert all blob URLs to data URLs and scale down
   const conversions = Array.from(images).map(async (img) => {
     const blobUrl = img.getAttribute('src');
-    if (!blobUrl) return;
+    if (!blobUrl) return null;
     
     try {
       // Fetch the blob data
       const response = await fetch(blobUrl);
       const blob = await response.blob();
       
-      // Convert blob to data URL
-      return new Promise<{ img: Element; dataUrl: string }>((resolve, reject) => {
+      // Convert blob to data URL and get image dimensions
+      return new Promise<{ img: Element; dataUrl: string; naturalWidth: number; naturalHeight: number }>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => {
           if (typeof reader.result === 'string') {
-            resolve({ img, dataUrl: reader.result });
+            // Create temporary image to get natural dimensions
+            const tempImg = new Image();
+            tempImg.onload = () => {
+              resolve({ 
+                img, 
+                dataUrl: reader.result as string,
+                naturalWidth: tempImg.naturalWidth,
+                naturalHeight: tempImg.naturalHeight
+              });
+            };
+            tempImg.onerror = () => reject(new Error('Failed to load image'));
+            tempImg.src = reader.result as string;
           } else {
             reject(new Error('Failed to convert blob to data URL'));
           }
@@ -43,10 +56,18 @@ async function convertBlobUrlsToDataUrls(html: string): Promise<string> {
   
   const results = await Promise.all(conversions);
   
-  // Apply the conversions
+  // Apply the conversions and reduce all dimensions to 60%
   results.forEach(result => {
     if (result) {
+      const width = Math.round(result.naturalWidth * 0.6);
+      const height = Math.round(result.naturalHeight * 0.6);
+      
+      console.log(`Setting image dimensions: ${result.naturalWidth}x${result.naturalHeight} → ${width}x${height}`);
+      
       result.img.setAttribute('src', result.dataUrl);
+      result.img.setAttribute('width', width.toString());
+      result.img.setAttribute('height', height.toString());
+      result.img.removeAttribute('style');
       result.img.removeAttribute('data-blob-url');
     }
   });
