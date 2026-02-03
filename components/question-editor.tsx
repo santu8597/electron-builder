@@ -189,16 +189,17 @@ export default function QuestionEditor({ question, onSave, onCancel }: QuestionE
     setTableData(newData)
   }
   
-  // Remove last row
-  const removeTableRow = () => {
+  // Remove specific row
+  const removeTableRow = (rowIdx: number) => {
     if (!tableData || tableData.length <= 1) return
-    setTableData(tableData.slice(0, -1))
+    const newData = tableData.filter((_, idx) => idx !== rowIdx)
+    setTableData(newData)
   }
   
-  // Remove last column
-  const removeTableCol = () => {
+  // Remove specific column
+  const removeTableCol = (colIdx: number) => {
     if (!tableData || tableData[0].length <= 1) return
-    const newData = tableData.map(row => row.slice(0, -1))
+    const newData = tableData.map(row => row.filter((_, idx) => idx !== colIdx))
     setTableData(newData)
   }
 
@@ -246,9 +247,36 @@ export default function QuestionEditor({ question, onSave, onCancel }: QuestionE
               <label className="text-xs font-semibold text-foreground block mb-1">Table</label>
               <div className="overflow-x-auto border border-border rounded">
                 <table className="min-w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="border border-gray-300 bg-gray-100 p-0 w-8"></th>
+                      {tableData[0].map((_, colIdx) => (
+                        <th key={colIdx} className="border border-gray-300 bg-gray-100 p-1 text-center">
+                          <button
+                            type="button"
+                            onClick={() => removeTableCol(colIdx)}
+                            className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-1 rounded"
+                            title="Delete column"
+                          >
+                            ×
+                          </button>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
                   <tbody>
                     {tableData.map((row, rowIdx) => (
                       <tr key={rowIdx}>
+                        <td className="border border-gray-300 bg-gray-100 p-0 text-center">
+                          <button
+                            type="button"
+                            onClick={() => removeTableRow(rowIdx)}
+                            className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-1 rounded w-full h-full"
+                            title="Delete row"
+                          >
+                            ×
+                          </button>
+                        </td>
                         {row.map((cell, colIdx) => (
                           <td key={colIdx} className="border border-gray-300 p-0">
                             <input
@@ -267,8 +295,6 @@ export default function QuestionEditor({ question, onSave, onCancel }: QuestionE
               <div className="flex gap-2 mt-2">
                 <button type="button" onClick={addTableRow} className="px-2 py-1 text-xs bg-neutral-light hover:bg-border rounded">+ Row</button>
                 <button type="button" onClick={addTableCol} className="px-2 py-1 text-xs bg-neutral-light hover:bg-border rounded">+ Column</button>
-                <button type="button" onClick={removeTableRow} className="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-accent-red rounded">- Row</button>
-                <button type="button" onClick={removeTableCol} className="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-accent-red rounded">- Column</button>
               </div>
             </div>
           )}
@@ -292,9 +318,36 @@ export default function QuestionEditor({ question, onSave, onCancel }: QuestionE
               <label className="text-xs font-semibold text-foreground block mb-1">Table</label>
               <div className="overflow-x-auto border border-border rounded">
                 <table className="min-w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="border border-gray-300 bg-gray-100 p-0 w-8"></th>
+                      {tableData[0].map((_, colIdx) => (
+                        <th key={colIdx} className="border border-gray-300 bg-gray-100 p-1 text-center">
+                          <button
+                            type="button"
+                            onClick={() => removeTableCol(colIdx)}
+                            className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-1 rounded"
+                            title="Delete column"
+                          >
+                            ×
+                          </button>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
                   <tbody>
                     {tableData.map((row, rowIdx) => (
                       <tr key={rowIdx}>
+                        <td className="border border-gray-300 bg-gray-100 p-0 text-center">
+                          <button
+                            type="button"
+                            onClick={() => removeTableRow(rowIdx)}
+                            className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-1 rounded w-full h-full"
+                            title="Delete row"
+                          >
+                            ×
+                          </button>
+                        </td>
                         {row.map((cell, colIdx) => (
                           <td key={colIdx} className="border border-gray-300 p-0">
                             <input
@@ -313,8 +366,6 @@ export default function QuestionEditor({ question, onSave, onCancel }: QuestionE
               <div className="flex gap-2 mt-2">
                 <button type="button" onClick={addTableRow} className="px-2 py-1 text-xs bg-neutral-light hover:bg-border rounded">+ Row</button>
                 <button type="button" onClick={addTableCol} className="px-2 py-1 text-xs bg-neutral-light hover:bg-border rounded">+ Column</button>
-                <button type="button" onClick={removeTableRow} className="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-accent-red rounded">- Row</button>
-                <button type="button" onClick={removeTableCol} className="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-accent-red rounded">- Column</button>
               </div>
             </div>
           )}

@@ -112,20 +112,8 @@ export default function PreviewModal({ title, sections, onClose }: PreviewModalP
           >
             Close
           </button>
-          <button
-            onClick={handleExportPDF}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-light rounded transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Export PDF
-          </button>
-          <button
-            onClick={handleExportWord}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground bg-neutral-light hover:bg-border rounded transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Export Word
-          </button>
+          
+          
         </div>
       </div>
     </div>
