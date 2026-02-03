@@ -59,8 +59,8 @@ async function convertBlobUrlsToDataUrls(html: string): Promise<string> {
   // Apply the conversions and reduce all dimensions to 60%
   results.forEach(result => {
     if (result) {
-      const width = Math.round(result.naturalWidth * 0.6);
-      const height = Math.round(result.naturalHeight * 0.6);
+      const width = Math.round(result.naturalWidth * 0.7);
+      const height = Math.round(result.naturalHeight * 0.7);
       
       console.log(`Setting image dimensions: ${result.naturalWidth}x${result.naturalHeight} → ${width}x${height}`);
       

@@ -62,14 +62,7 @@ export default function Header({ draftTitle, setDraftTitle, onSaveDraft, onExpor
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={onSaveDraft}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground bg-neutral-light hover:bg-border rounded-lg transition-colors"
-            title="Save current draft to browser"
-          >
-            <Save className="w-4 h-4" />
-            Save Draft
-          </button>
+  
 
           <div className="relative">
             <button
