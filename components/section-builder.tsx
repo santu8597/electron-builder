@@ -325,7 +325,7 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
                                   </span>
                                   <div className="flex-1 min-w-0">
                                     <div 
-                                      className="text-sm text-foreground prose prose-sm max-w-none"
+                                      className="text-sm text-foreground prose prose-sm max-w-none question-html-content"
                                       dangerouslySetInnerHTML={{ __html: question.text }}
                                     />
                                     <div className="flex gap-2 mt-2 items-center">
@@ -376,7 +376,7 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
                                   </span>
                                   <div className="flex-1 min-w-0">
                                     <div 
-                                      className="text-sm text-foreground prose prose-sm max-w-none"
+                                      className="text-sm text-foreground prose prose-sm max-w-none question-html-content"
                                       dangerouslySetInnerHTML={{ __html: question.text }}
                                     />
                                     <div className="flex gap-2 mt-2 items-center">
@@ -417,7 +417,7 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
                               </span>
                               <div className="flex-1 min-w-0">
                                 <div 
-                                  className="text-sm text-foreground prose prose-sm max-w-none"
+                                  className="text-sm text-foreground prose prose-sm max-w-none question-html-content"
                                   dangerouslySetInnerHTML={{ __html: question.text }}
                                 />
                                 <div className="flex gap-2 mt-2 items-center">
@@ -460,7 +460,7 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
 
                         <div className="flex-1 min-w-0">
                           <div 
-                            className="text-sm text-foreground prose prose-sm max-w-none"
+                            className="text-sm text-foreground prose prose-sm max-w-none question-html-content"
                             dangerouslySetInnerHTML={{ __html: question.text }}
                           />
                           <div className="flex gap-2 mt-2 items-center">
