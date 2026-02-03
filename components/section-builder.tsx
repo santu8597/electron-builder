@@ -5,7 +5,7 @@ import type React from "react"
 import { Trash2, ChevronDown } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import type { Section } from "@/app/page"
-import QuestionEditor from "./question-editor"
+import EditQuestionModal from "./edit-question-modal"
 import { showErrorDialog } from "@/lib/electron-api"
 
 // Declare MathJax type
@@ -319,13 +319,6 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
                           </div>
                           {mcqQuestions.map((question, index) => (
                             <div key={question.id} className="mb-3">
-                              {editingQuestion === question.id ? (
-                                <QuestionEditor
-                                  question={question}
-                                  onSave={(updates) => handleUpdateQuestion(question.id, updates)}
-                                  onCancel={() => setEditingQuestion(null)}
-                                />
-                              ) : (
                                 <div className="flex items-start gap-3 p-3 bg-white rounded border border-border hover:shadow-sm transition-shadow group">
                                   <span className="text-xs font-semibold text-neutral-gray bg-neutral-light px-2 py-1 rounded flex-shrink-0 mt-0.5">
                                     {toRoman(index + 1)}
@@ -359,7 +352,6 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
                                     </button>
                                   </div>
                                 </div>
-                              )}
                             </div>
                           ))}
                         </div>
@@ -378,13 +370,6 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
                           </div>
                           {fillInBlanksQuestions.map((question, index) => (
                             <div key={question.id} className="mb-3">
-                              {editingQuestion === question.id ? (
-                                <QuestionEditor
-                                  question={question}
-                                  onSave={(updates) => handleUpdateQuestion(question.id, updates)}
-                                  onCancel={() => setEditingQuestion(null)}
-                                />
-                              ) : (
                                 <div className="flex items-start gap-3 p-3 bg-white rounded border border-border hover:shadow-sm transition-shadow group">
                                   <span className="text-xs font-semibold text-neutral-gray bg-neutral-light px-2 py-1 rounded flex-shrink-0 mt-0.5">
                                     {index + 1}
@@ -418,7 +403,6 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
                                     </button>
                                   </div>
                                 </div>
-                              )}
                             </div>
                           ))}
                         </div>
@@ -427,13 +411,6 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
                       {/* Other questions (if any) */}
                       {otherQuestions.map((question, index) => (
                         <div key={question.id} className="mb-3">
-                          {editingQuestion === question.id ? (
-                            <QuestionEditor
-                              question={question}
-                              onSave={(updates) => handleUpdateQuestion(question.id, updates)}
-                              onCancel={() => setEditingQuestion(null)}
-                            />
-                          ) : (
                             <div className="flex items-start gap-3 p-3 bg-white rounded border border-border hover:shadow-sm transition-shadow group">
                               <span className="text-xs font-semibold text-neutral-gray bg-neutral-light px-2 py-1 rounded flex-shrink-0 mt-0.5">
                                 {index + 1}
@@ -467,7 +444,6 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
                                 </button>
                               </div>
                             </div>
-                          )}
                         </div>
                       ))}
                     </>
@@ -477,13 +453,6 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
                 // For other groups (B, C, D, E) - regular numbering
                 return section.questions.map((question, index) => (
                   <div key={question.id} className="mb-3">
-                    {editingQuestion === question.id ? (
-                      <QuestionEditor
-                        question={question}
-                        onSave={(updates) => handleUpdateQuestion(question.id, updates)}
-                        onCancel={() => setEditingQuestion(null)}
-                      />
-                    ) : (
                       <div className="flex items-start gap-3 p-3 bg-white rounded border border-border hover:shadow-sm transition-shadow group">
                         <span className="text-xs font-semibold text-neutral-gray bg-neutral-light px-2 py-1 rounded flex-shrink-0 mt-0.5">
                           {index + 1}
@@ -519,7 +488,6 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
                           </button>
                         </div>
                       </div>
-                    )}
                   </div>
                 ))
               })()}
@@ -527,6 +495,19 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
           )}
         </div>
       )}
+      
+      {/* Edit Question Modal */}
+      {editingQuestion && (() => {
+        const question = section.questions.find(q => q.id === editingQuestion)
+        if (!question) return null
+        return (
+          <EditQuestionModal
+            question={question}
+            onSave={(updates) => handleUpdateQuestion(question.id, updates)}
+            onClose={() => setEditingQuestion(null)}
+          />
+        )
+      })()}
     </div>
   )
 }
