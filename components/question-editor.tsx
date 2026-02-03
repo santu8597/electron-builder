@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import type { ParsedQuestion } from "@/app/page"
 
 interface QuestionEditorProps {
@@ -9,22 +9,71 @@ interface QuestionEditorProps {
   onCancel: () => void
 }
 
+// Parse HTML table into 2D array
+function parseTable(html: string): string[][] | null {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const table = doc.querySelector('table')
+  
+  if (!table) return null
+  
+  const rows: string[][] = []
+  const trs = table.querySelectorAll('tr')
+  
+  trs.forEach(tr => {
+    const cells: string[] = []
+    const tds = tr.querySelectorAll('td, th')
+    tds.forEach(td => cells.push(td.innerHTML.trim()))
+    if (cells.length > 0) rows.push(cells)
+  })
+  
+  return rows.length > 0 ? rows : null
+}
+
+// Convert 2D array back to HTML table
+function tableToHTML(data: string[][]): string {
+  if (data.length === 0) return ''
+  
+  let html = '<table class="border-collapse border border-gray-300">\n'
+  data.forEach((row, rowIdx) => {
+    html += '  <tr>\n'
+    row.forEach(cell => {
+      const tag = rowIdx === 0 ? 'th' : 'td'
+      html += `    <${tag} class="border border-gray-300 px-3 py-2">${cell}</${tag}>\n`
+    })
+    html += '  </tr>\n'
+  })
+  html += '</table>'
+  
+  return html
+}
+
+// Extract table from content and return content without table
+function extractTable(html: string): { table: string | null; contentWithoutTable: string } {
+  const tableMatch = html.match(/<table[\s\S]*?<\/table>/i)
+  
+  if (tableMatch) {
+    return {
+      table: tableMatch[0],
+      contentWithoutTable: html.replace(tableMatch[0], '[TABLE_PLACEHOLDER]')
+    }
+  }
+  
+  return { table: null, contentWithoutTable: html }
+}
+
 // Parse MCQ text into question stem and options
 function parseMCQText(text: string): { stem: string; options: { label: string; text: string }[] } | null {
   if (!text) return null
   
-  console.log('Parsing MCQ text:', text)
-  
   // Check if text contains options pattern - handle HTML <p>(a) or plain \n(a)
   const hasOptions = /(?:<p>|[\n\s])\(([a-d])\)\s*/i.test(text)
   if (!hasOptions) {
-    console.log('No options pattern found')
     return null
   }
   
   // Split by option pattern - handle <p>(a) or \n(a) or start with (a)
   const parts = text.split(/(?:<p>|(?:\n|^)\s*)\(([a-d])\)\s*/i)
-  console.log('Split parts:', parts)
   
   const stem = parts[0].trim()
   const options: { label: string; text: string }[] = []
@@ -43,11 +92,8 @@ function parseMCQText(text: string): { stem: string; options: { label: string; t
     }
   }
   
-  console.log('Parsed MCQ:', { stem, options })
-  
   // Only return if we found at least some options
   if (options.length === 0) {
-    console.log('No options found after parsing')
     return null
   }
   
@@ -68,28 +114,26 @@ export default function QuestionEditor({ question, onSave, onCancel }: QuestionE
   const [text, setText] = useState(question.text)
   const [marks, setMarks] = useState(question.marks)
   const [type, setType] = useState(question.type)
-  const previewRef = useRef<HTMLDivElement>(null)
+  
+  // Extract table from question text
+  const { table: extractedTable, contentWithoutTable } = extractTable(question.text)
+  const [tableData, setTableData] = useState<string[][] | null>(() => {
+    if (extractedTable) {
+      return parseTable(extractedTable)
+    }
+    return null
+  })
+  const [mainContent, setMainContent] = useState(contentWithoutTable)
   
   // For MCQs, parse into stem and options - initialize properly
   const isMCQ = type === 'mcq'
-  const initialMcqData = isMCQ ? parseMCQText(question.text) : null
-  
-  // Debug logging
-  useEffect(() => {
-    if (isMCQ) {
-      console.log('MCQ Editor Debug:', {
-        questionText: question.text,
-        parsed: initialMcqData
-      })
-    }
-  }, [])
+  const initialMcqData = isMCQ ? parseMCQText(contentWithoutTable) : null
   
   const [mcqStem, setMcqStem] = useState(() => {
     if (isMCQ && initialMcqData) {
       return initialMcqData.stem
     }
-    // Fallback to original text for MCQs if parsing fails
-    return isMCQ ? question.text : ''
+    return isMCQ ? contentWithoutTable : ''
   })
   
   const [mcqOptions, setMcqOptions] = useState(() => {
@@ -104,42 +148,72 @@ export default function QuestionEditor({ question, onSave, onCancel }: QuestionE
     ]
   })
   
-  // Update text when MCQ data changes
+  // Update text when MCQ data or table changes
   useEffect(() => {
+    let updatedText = ''
+    
     if (isMCQ && mcqStem) {
-      setText(reconstructMCQText(mcqStem, mcqOptions))
+      updatedText = reconstructMCQText(mcqStem, mcqOptions)
+    } else {
+      updatedText = mainContent
     }
-  }, [mcqStem, mcqOptions, isMCQ])
-
-  // Render math in preview whenever text changes
-  useEffect(() => {
-    if (previewRef.current && window.renderMathInElement) {
-      previewRef.current.innerHTML = text
-      window.renderMathInElement(previewRef.current, {
-        delimiters: [
-          {left: '$$', right: '$$', display: true},
-          {left: '$', right: '$', display: false},
-          {left: '\\(', right: '\\)', display: false},
-          {left: '\\[', right: '\\]', display: true}
-        ],
-        throwOnError: false
-      })
+    
+    // Re-insert table if it exists
+    if (tableData) {
+      updatedText = updatedText.replace('[TABLE_PLACEHOLDER]', tableToHTML(tableData))
     }
-  }, [text])
+    
+    setText(updatedText)
+  }, [mcqStem, mcqOptions, isMCQ, tableData, mainContent])
+  
+  // Handle table cell changes
+  const handleTableCellChange = (rowIdx: number, colIdx: number, value: string) => {
+    if (!tableData) return
+    const newData = tableData.map(row => [...row])
+    newData[rowIdx][colIdx] = value
+    setTableData(newData)
+  }
+  
+  // Add row to table
+  const addTableRow = () => {
+    if (!tableData || tableData.length === 0) return
+    const cols = tableData[0].length
+    const newRow = Array(cols).fill('')
+    setTableData([...tableData, newRow])
+  }
+  
+  // Add column to table
+  const addTableCol = () => {
+    if (!tableData) return
+    const newData = tableData.map(row => [...row, ''])
+    setTableData(newData)
+  }
+  
+  // Remove last row
+  const removeTableRow = () => {
+    if (!tableData || tableData.length <= 1) return
+    setTableData(tableData.slice(0, -1))
+  }
+  
+  // Remove last column
+  const removeTableCol = () => {
+    if (!tableData || tableData[0].length <= 1) return
+    const newData = tableData.map(row => row.slice(0, -1))
+    setTableData(newData)
+  }
 
   return (
     <div className="p-4 bg-white rounded border-2 border-primary space-y-3">
-      {isMCQ ? (
-        // MCQ Editor with separate inputs for stem and options
+      {isMCQ && initialMcqData ? (
+        // MCQ Editor with textareas
         <div className="space-y-3">
           <div>
             <label className="text-xs font-semibold text-foreground block mb-1">Question Stem</label>
             <textarea
-              value={mcqStem}
+              value={mcqStem.replace(/<[^>]*>/g, '')}
               onChange={(e) => setMcqStem(e.target.value)}
-              className="w-full text-sm p-2 border border-border rounded focus:outline-none focus:border-primary resize-none font-mono"
-              rows={2}
-              placeholder="Enter question text with LaTeX: $x^2$"
+              className="w-full text-sm p-3 border border-border rounded focus:outline-none focus:border-primary min-h-[60px] resize-y"
+              rows={3}
             />
           </div>
           
@@ -148,54 +222,102 @@ export default function QuestionEditor({ question, onSave, onCancel }: QuestionE
             <div className="space-y-2">
               {mcqOptions.map((opt, idx) => (
                 <div key={opt.label} className="flex items-start gap-2">
-                  <span className="text-sm font-semibold text-foreground bg-neutral-light px-2 py-1.5 rounded mt-0.5">
+                  <span className="text-sm font-semibold text-foreground bg-neutral-light px-2 py-2 rounded flex-shrink-0">
                     ({opt.label})
                   </span>
                   <textarea
-                    value={opt.text}
+                    value={opt.text.replace(/<[^>]*>/g, '')}
                     onChange={(e) => {
                       const newOptions = [...mcqOptions]
                       newOptions[idx].text = e.target.value
                       setMcqOptions(newOptions)
                     }}
-                    className="flex-1 text-sm p-2 border border-border rounded focus:outline-none focus:border-primary resize-none font-mono"
-                    rows={1}
-                    placeholder={`Option ${opt.label.toUpperCase()}`}
+                    className="flex-1 text-sm p-2 border border-border rounded focus:outline-none focus:border-primary min-h-[36px] resize-y"
+                    rows={2}
                   />
                 </div>
               ))}
             </div>
           </div>
           
-          {/* Preview */}
-          <div className="p-3 bg-neutral-lightest border border-border rounded">
-            <div className="text-xs font-semibold text-neutral-gray mb-1">Preview:</div>
-            <div 
-              ref={previewRef}
-              className="text-sm text-foreground min-h-[40px]"
-            />
-          </div>
+          {/* Table Editor */}
+          {tableData && (
+            <div>
+              <label className="text-xs font-semibold text-foreground block mb-1">Table</label>
+              <div className="overflow-x-auto border border-border rounded">
+                <table className="min-w-full border-collapse">
+                  <tbody>
+                    {tableData.map((row, rowIdx) => (
+                      <tr key={rowIdx}>
+                        {row.map((cell, colIdx) => (
+                          <td key={colIdx} className="border border-gray-300 p-0">
+                            <input
+                              type="text"
+                              value={cell.replace(/<[^>]*>/g, '')}
+                              onChange={(e) => handleTableCellChange(rowIdx, colIdx, e.target.value)}
+                              className="w-full px-2 py-1 text-sm focus:outline-none focus:bg-blue-50 min-w-[80px]"
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button type="button" onClick={addTableRow} className="px-2 py-1 text-xs bg-neutral-light hover:bg-border rounded">+ Row</button>
+                <button type="button" onClick={addTableCol} className="px-2 py-1 text-xs bg-neutral-light hover:bg-border rounded">+ Column</button>
+                <button type="button" onClick={removeTableRow} className="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-accent-red rounded">- Row</button>
+                <button type="button" onClick={removeTableCol} className="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-accent-red rounded">- Column</button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         // Regular editor for non-MCQ questions
-        <div>
-          <label className="text-xs font-semibold text-foreground block mb-1">Question Text</label>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            className="w-full text-sm p-2 border border-border rounded focus:outline-none focus:border-primary resize-none font-mono"
-            rows={3}
-            placeholder="Enter question with LaTeX: $x^2$ or $$\frac{a}{b}$$"
-          />
-          
-          {/* Preview */}
-          <div className="mt-2 p-3 bg-neutral-lightest border border-border rounded">
-            <div className="text-xs font-semibold text-neutral-gray mb-1">Preview:</div>
-            <div 
-              ref={previewRef}
-              className="text-sm text-foreground min-h-[40px]"
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-semibold text-foreground block mb-1">Question Text</label>
+            <textarea
+              value={mainContent.replace(/<[^>]*>/g, '')}
+              onChange={(e) => setMainContent(e.target.value)}
+              className="w-full text-sm p-3 border border-border rounded focus:outline-none focus:border-primary min-h-[80px] resize-y"
+              rows={4}
             />
           </div>
+          
+          {/* Table Editor */}
+          {tableData && (
+            <div>
+              <label className="text-xs font-semibold text-foreground block mb-1">Table</label>
+              <div className="overflow-x-auto border border-border rounded">
+                <table className="min-w-full border-collapse">
+                  <tbody>
+                    {tableData.map((row, rowIdx) => (
+                      <tr key={rowIdx}>
+                        {row.map((cell, colIdx) => (
+                          <td key={colIdx} className="border border-gray-300 p-0">
+                            <input
+                              type="text"
+                              value={cell.replace(/<[^>]*>/g, '')}
+                              onChange={(e) => handleTableCellChange(rowIdx, colIdx, e.target.value)}
+                              className="w-full px-2 py-1 text-sm focus:outline-none focus:bg-blue-50 min-w-[80px]"
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button type="button" onClick={addTableRow} className="px-2 py-1 text-xs bg-neutral-light hover:bg-border rounded">+ Row</button>
+                <button type="button" onClick={addTableCol} className="px-2 py-1 text-xs bg-neutral-light hover:bg-border rounded">+ Column</button>
+                <button type="button" onClick={removeTableRow} className="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-accent-red rounded">- Row</button>
+                <button type="button" onClick={removeTableCol} className="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-accent-red rounded">- Column</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
