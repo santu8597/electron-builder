@@ -8,31 +8,59 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
+interface LoginResponse {
+  success: boolean
+  token: string
+  moderator: {
+    id: string
+    name: string
+    email: string
+    assignedSubjects: string[]
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter()
-  const [username, setUsername] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setIsLoading(true)
 
-    // Simple authentication check
-    if (username === "admin" && password === "admin123") {
-      // Store authentication status
-      localStorage.setItem("isAuthenticated", "true")
-      localStorage.setItem("username", username)
-      
-      // Navigate to dashboard
-      setTimeout(() => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      })
+
+      const data: LoginResponse = await response.json()
+
+      if (response.ok && data.success) {
+        // Store authentication token and user data
+        localStorage.setItem("token", data.token)
+        localStorage.setItem("isAuthenticated", "true")
+        localStorage.setItem("moderator", JSON.stringify(data.moderator))
+        
+        // Navigate to dashboard
         router.push("/dashboard")
-      }, 500)
-    } else {
-      setError("Invalid username or password")
+      } else {
+        setError("Invalid email or password")
+        setIsLoading(false)
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.")
       setIsLoading(false)
+      console.error("Login error:", err)
     }
   }
 
@@ -48,15 +76,15 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="username"
-                type="text"
-                placeholder="Enter username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
-                autoComplete="username"
+                autoComplete="email"
                 disabled={isLoading}
               />
             </div>
@@ -84,12 +112,6 @@ export default function LoginPage() {
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-800 font-medium">Demo Credentials:</p>
-            <p className="text-sm text-blue-600">Username: admin</p>
-            <p className="text-sm text-blue-600">Password: admin123</p>
-          </div>
         </CardContent>
       </Card>
     </div>
