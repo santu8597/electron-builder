@@ -1,7 +1,7 @@
 "use client"
 
-import { X, Download } from "lucide-react"
-import { useEffect, useRef } from "react"
+import { X } from "lucide-react"
+import { useRef } from "react"
 import type { Section } from "@/app/page"
 
 // Declare MathJax type

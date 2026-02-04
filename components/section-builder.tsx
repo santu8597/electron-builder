@@ -8,13 +8,14 @@ import type { Section } from "@/app/page"
 import EditQuestionModal from "./edit-question-modal"
 import { showErrorDialog } from "@/lib/electron-api"
 
-// Declare MathJax type
+// Declare KaTeX type
 declare global {
   interface Window {
     MathJax?: {
       typesetPromise?: (elements?: HTMLElement[]) => Promise<void>
       typeset?: (elements?: HTMLElement[]) => void
     }
+    renderMathInElement?: (element: HTMLElement, options?: any) => void
   }
 }
 
@@ -59,6 +60,21 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
 
   const sectionMarks = section.questions.reduce((sum, q) => sum + q.marks, 0)
 
+  // Trigger math rendering when section questions change
+  useEffect(() => {
+    if (sectionRef.current && window.renderMathInElement) {
+      window.renderMathInElement(sectionRef.current, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false},
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        throwOnError: false
+      })
+    }
+  }, [section.questions])
+
   const handleDeleteSection = () => {
     setPaperSections(allSections.filter((s) => s.id !== section.id))
   }
@@ -77,6 +93,9 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
   }
 
   const handleUpdateQuestion = (questionId: string, updates: any) => {
+    console.log('handleUpdateQuestion - updates:', updates)
+    console.log('Updated question text HTML:', updates.text)
+    
     const updatedSections = allSections.map((s) => {
       if (s.id === section.id) {
         return {
@@ -88,6 +107,42 @@ export default function SectionBuilder({ section, allSections, setPaperSections 
     })
     setPaperSections(updatedSections)
     setEditingQuestion(null)
+    
+    // Force KaTeX to reprocess by removing and re-adding katex classes
+    setTimeout(() => {
+      if (sectionRef.current) {
+        console.log('About to render math in element')
+        console.log('Section HTML before KaTeX:', sectionRef.current.innerHTML)
+        
+        // Remove all existing katex-rendered elements
+        const katexElements = sectionRef.current.querySelectorAll('.katex, .katex-html')
+        katexElements.forEach(el => {
+          const parent = el.parentElement
+          if (parent && parent.classList.contains('math')) {
+            // Replace katex element with original span content
+            const mathSpan = parent.cloneNode(true) as HTMLElement
+            mathSpan.innerHTML = mathSpan.textContent || ''
+            parent.replaceWith(mathSpan)
+          }
+        })
+        
+        // Now run KaTeX rendering
+        if (window.renderMathInElement) {
+          console.log('Calling renderMathInElement')
+          window.renderMathInElement(sectionRef.current, {
+            delimiters: [
+              {left: '\\(', right: '\\)', display: false},
+              {left: '\\[', right: '\\]', display: true}
+            ],
+            throwOnError: false,
+            strict: false
+          })
+          console.log('Section HTML after KaTeX:', sectionRef.current.innerHTML)
+        } else {
+          console.log('window.renderMathInElement not available')
+        }
+      }
+    }, 100)
   }
 
   const handleDropQuestion = (e: React.DragEvent) => {

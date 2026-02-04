@@ -110,6 +110,46 @@ function reconstructMCQText(stem: string, options: { label: string; text: string
   return text
 }
 
+// Convert HTML math to plain LaTeX for editing
+function extractLaTeXForEditing(html: string): string {
+  if (!html) return ''
+  
+  let text = html
+  
+  // Convert display math: <span class="math display">\[...\]</span> or <p class="math-display">$$...$$</p> -> $$...$$
+  text = text.replace(/<span class="math display">\\?\[?([\s\S]*?)\\?\]?<\/span>/g, '$$$$1$$')
+  text = text.replace(/<p class="math-display">\$\$([\s\S]*?)\$\$<\/p>/g, '$$$$1$$')
+  
+  // Convert inline math: <span class="math inline">\(...\)</span> -> $...$
+  text = text.replace(/<span class="math inline">\\?\(?([\s\S]*?)\\?\)?<\/span>/g, '$$$1$$')
+  
+  // Unwrap [MATH] tags
+  text = text.replace(/\[MATH\]([\s\S]*?)\[\/MATH\]/g, '$1')
+  
+  // Remove other HTML tags
+  text = text.replace(/<[^>]*>/g, '')
+  
+  return text
+}
+
+// Convert plain LaTeX back to HTML math format (keep span format for compatibility)
+function restoreLaTeXFromEditing(text: string): string {
+  if (!text) return ''
+  
+  let html = text
+  
+  // First, convert display math: $$...$$ -> placeholder
+  html = html.replace(/\$\$([^\$]+)\$\$/g, '###DISPLAYMATH###$1###ENDDISPLAYMATH###')
+  
+  // Then convert inline math: $...$ -> <span class="math inline">\(...\)</span>
+  html = html.replace(/\$([^\$]+)\$/g, '<span class="math inline">\\($1\\)</span>')
+  
+  // Finally, restore display math with proper format
+  html = html.replace(/###DISPLAYMATH###([^#]+)###ENDDISPLAYMATH###/g, '<span class="math display">\\[$1\\]</span>')
+  
+  return html
+}
+
 export default function QuestionEditor({ question, onSave, onCancel }: QuestionEditorProps) {
   const [text, setText] = useState(question.text)
   const [marks, setMarks] = useState(question.marks)
@@ -123,7 +163,9 @@ export default function QuestionEditor({ question, onSave, onCancel }: QuestionE
     }
     return null
   })
-  const [mainContent, setMainContent] = useState(contentWithoutTable)
+  
+  // Store content in plain text format (with LaTeX as $...$ and $$...$$)
+  const [mainContent, setMainContent] = useState(() => extractLaTeXForEditing(contentWithoutTable))
   
   // For MCQs, parse into stem and options - initialize properly
   const isMCQ = type === 'mcq'
@@ -131,14 +173,17 @@ export default function QuestionEditor({ question, onSave, onCancel }: QuestionE
   
   const [mcqStem, setMcqStem] = useState(() => {
     if (isMCQ && initialMcqData) {
-      return initialMcqData.stem
+      return extractLaTeXForEditing(initialMcqData.stem)
     }
-    return isMCQ ? contentWithoutTable : ''
+    return isMCQ ? extractLaTeXForEditing(contentWithoutTable) : ''
   })
   
   const [mcqOptions, setMcqOptions] = useState(() => {
     if (isMCQ && initialMcqData?.options && initialMcqData.options.length > 0) {
-      return initialMcqData.options
+      return initialMcqData.options.map(opt => ({
+        ...opt,
+        text: extractLaTeXForEditing(opt.text)
+      }))
     }
     return [
       { label: 'a', text: '' },
@@ -148,14 +193,19 @@ export default function QuestionEditor({ question, onSave, onCancel }: QuestionE
     ]
   })
   
-  // Update text when MCQ data or table changes
+  // Update text when MCQ data or table changes - restore HTML format when building final text
   useEffect(() => {
     let updatedText = ''
     
     if (isMCQ && mcqStem) {
-      updatedText = reconstructMCQText(mcqStem, mcqOptions)
+      const restoredStem = restoreLaTeXFromEditing(mcqStem)
+      const restoredOptions = mcqOptions.map(opt => ({
+        ...opt,
+        text: restoreLaTeXFromEditing(opt.text)
+      }))
+      updatedText = reconstructMCQText(restoredStem, restoredOptions)
     } else {
-      updatedText = mainContent
+      updatedText = restoreLaTeXFromEditing(mainContent)
     }
     
     // Re-insert table if it exists
@@ -211,7 +261,7 @@ export default function QuestionEditor({ question, onSave, onCancel }: QuestionE
           <div>
             <label className="text-xs font-semibold text-foreground block mb-1">Question Stem</label>
             <textarea
-              value={mcqStem.replace(/<[^>]*>/g, '')}
+              value={mcqStem}
               onChange={(e) => setMcqStem(e.target.value)}
               className="w-full text-sm p-3 border border-border rounded focus:outline-none focus:border-primary min-h-[60px] resize-y"
               rows={3}
@@ -227,7 +277,7 @@ export default function QuestionEditor({ question, onSave, onCancel }: QuestionE
                     ({opt.label})
                   </span>
                   <textarea
-                    value={opt.text.replace(/<[^>]*>/g, '')}
+                    value={opt.text}
                     onChange={(e) => {
                       const newOptions = [...mcqOptions]
                       newOptions[idx].text = e.target.value
@@ -305,7 +355,7 @@ export default function QuestionEditor({ question, onSave, onCancel }: QuestionE
           <div>
             <label className="text-xs font-semibold text-foreground block mb-1">Question Text</label>
             <textarea
-              value={mainContent.replace(/<[^>]*>/g, '')}
+              value={mainContent}
               onChange={(e) => setMainContent(e.target.value)}
               className="w-full text-sm p-3 border border-border rounded focus:outline-none focus:border-primary min-h-[80px] resize-y"
               rows={4}
@@ -406,7 +456,28 @@ export default function QuestionEditor({ question, onSave, onCancel }: QuestionE
           Cancel
         </button>
         <button
-          onClick={() => onSave({ text, marks, type })}
+          onClick={() => {
+            // Build the final text with proper HTML format
+            let finalText = ''
+            
+            if (isMCQ && mcqStem) {
+              const restoredStem = restoreLaTeXFromEditing(mcqStem)
+              const restoredOptions = mcqOptions.map(opt => ({
+                ...opt,
+                text: restoreLaTeXFromEditing(opt.text)
+              }))
+              finalText = reconstructMCQText(restoredStem, restoredOptions)
+            } else {
+              finalText = restoreLaTeXFromEditing(mainContent)
+            }
+            
+            // Re-insert table if it exists
+            if (tableData) {
+              finalText = finalText.replace('[TABLE_PLACEHOLDER]', tableToHTML(tableData))
+            }
+            
+            onSave({ text: finalText, marks, type })
+          }}
           className="px-3 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary-light rounded transition-colors"
         >
           Save
