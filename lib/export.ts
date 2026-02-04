@@ -489,6 +489,9 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
       })
     })
     
+    // Preserve line breaks by keeping <p> tags and <br> tags
+    // Don't strip <p> tags - they're essential for maintaining paragraph structure
+    
     // Clean up excessive whitespace (but preserve single line breaks)
     cleaned = cleaned.replace(/\n\s*\n\s*\n/g, '\n\n')
     
@@ -507,10 +510,10 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
     .section-title { font-family: 'Cambria', serif; font-size: 16pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
     .subsection-title { font-family: 'Cambria', serif; font-size: 14pt; font-weight: bold; margin-top: 15px; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px; }
     .instructions { font-style: italic; font-size: 12pt; margin-bottom: 10px; }
-    .question { margin-bottom: 15px; line-height: 1.8; }
+    .question { margin-bottom: 15px; line-height: 1.8; white-space: pre-wrap; }
     .question-number { font-weight: bold; margin-right: 8px; }
     .marks { font-weight: bold; margin-left: 8px; }
-    p { margin: 8px 0; line-height: 1.6; }
+    p { margin: 8px 0; line-height: 1.6; white-space: pre-wrap; display: block; }
     table { border-collapse: collapse; margin: 10px 0; width: 100%; }
     table, th, td { border: 1px solid #333; padding: 8px; }
     img { display: block; margin: 10px auto; }
@@ -632,9 +635,10 @@ function generateHTMLForPandoc(title: string, sections: Section[]): string {
     .section-title { font-family: 'Cambria', serif; font-size: 14pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
     .subsection-title { font-family: 'Cambria', serif; font-size: 12pt; font-weight: bold; margin-top: 15px; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px; }
     .instructions { font-style: italic; font-size: 10pt; margin-bottom: 10px; }
-    .question { margin-bottom: 15px; font-size: 11pt; line-height: 1.8; }
+    .question { margin-bottom: 15px; font-size: 11pt; line-height: 1.8; white-space: pre-wrap; }
     .question-number { font-weight: bold; margin-right: 8px; }
     .marks { font-weight: bold; margin-left: 8px; }
+    p { margin: 8px 0; line-height: 1.6; white-space: pre-wrap; display: block; }
     table { border-collapse: collapse; margin: 10px 0; }
     table, th, td { border: 1px solid #333; padding: 8px; }
     img { max-width: 100%; height: auto; margin: 10px 0; }
