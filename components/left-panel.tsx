@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { Upload, FileText, AlertCircle } from "lucide-react"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { parseDocxFile } from "@/lib/parser"
 import type { Section, ParsedQuestion } from "@/app/page"
 import QuestionCard from "./question-card"
@@ -15,6 +15,7 @@ interface LeftPanelProps {
   selectedQuestions?: ParsedQuestion[]
   paperSections?: Section[]
   setPaperSections?: (sections: Section[]) => void
+  pinataUrl?: string | null
 }
 
 export default function LeftPanel({ 
@@ -23,12 +24,65 @@ export default function LeftPanel({
   setSelectedQuestions,
   selectedQuestions = [],
   paperSections = [],
-  setPaperSections
+  setPaperSections,
+  pinataUrl
 }: LeftPanelProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [uploadedFileName, setUploadedFileName] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Fetch from Pinata on mount if URL is provided
+  useEffect(() => {
+    if (pinataUrl && parsedContent.length === 0) {
+      fetchFromPinata(pinataUrl)
+    }
+  }, [pinataUrl])
+
+  const fetchFromPinata = async (url: string) => {
+    setIsLoading(true)
+    setError("")
+    setUploadedFileName("Question Bank from Pinata")
+
+    try {
+      console.log("Fetching from Pinata URL:", url)
+      
+      // Try direct fetch first (Pinata gateway allows CORS)
+      const response = await fetch(url, {
+        method: "GET",
+        cache: "no-cache"
+      })
+      
+      console.log("Response status:", response.status)
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file from Pinata: ${response.status} ${response.statusText}`)
+      }
+
+      const blob = await response.blob()
+      console.log("Blob received, size:", blob.size, "type:", blob.type)
+      
+      if (blob.size === 0) {
+        throw new Error("Received empty file from Pinata")
+      }
+      
+      const file = new File([blob], "questions.docx", {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      })
+
+      const parsed = await parseDocxFile(file)
+      console.log("Parsed successfully, sections:", parsed.length)
+      setParsedContent(parsed)
+      setError("")
+    } catch (err) {
+      console.error("Pinata fetch error:", err)
+      setError(err instanceof Error ? err.message : "Failed to fetch from Pinata. Please try uploading the file manually.")
+      setParsedContent([])
+      setUploadedFileName("")
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

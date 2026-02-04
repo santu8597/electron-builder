@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Header from "@/components/header"
 import LeftPanel from "@/components/left-panel"
 import RightPanel from "@/components/right-panel"
@@ -51,6 +52,7 @@ export interface QuestionPaper {
 }
 
 export default function QuestionSetterPage() {
+  const router = useRouter()
   const [questionPaper, setQuestionPaper] = useState<QuestionPaper>({
     id: "paper-1",
     title: "Question Paper",
@@ -64,6 +66,23 @@ export default function QuestionSetterPage() {
   const [paperSections, setPaperSections] = useState<Section[]>([])
   const [draftTitle, setDraftTitle] = useState("Question Paper")
   const [isExporting, setIsExporting] = useState(false)
+  const [pinataUrl, setPinataUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Get selected subject from localStorage
+    const selectedSubjectData = localStorage.getItem("selectedSubject")
+    if (selectedSubjectData) {
+      try {
+        const subject = JSON.parse(selectedSubjectData)
+        if (subject.questionPaper?.pinataUrl) {
+          setPinataUrl(subject.questionPaper.pinataUrl)
+          setDraftTitle(subject.name || "Question Paper")
+        }
+      } catch (err) {
+        console.error("Failed to parse subject data:", err)
+      }
+    }
+  }, [])
 
   const handleExportPDF = async () => {
     setIsExporting(true)
@@ -105,6 +124,7 @@ export default function QuestionSetterPage() {
           selectedQuestions={selectedQuestions}
           paperSections={paperSections}
           setPaperSections={setPaperSections}
+          pinataUrl={pinataUrl}
         />
         <RightPanel 
           selectedQuestions={selectedQuestions}

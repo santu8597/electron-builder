@@ -114,7 +114,9 @@ export default function DashboardPage() {
     router.push("/login")
   }
 
-  const handleSetPaper = (subjectId: string) => {
+  const handleSetPaper = (subject: Subject) => {
+    // Store subject data in localStorage for question-setter page
+    localStorage.setItem("selectedSubject", JSON.stringify(subject))
     // Navigate to question setter page
     router.push("/question-setter")
   }
@@ -203,7 +205,7 @@ export default function DashboardPage() {
                   <CardContent>
                     <Button 
                       className="w-full" 
-                      onClick={() => handleSetPaper(subject._id)}
+                      onClick={() => handleSetPaper(subject)}
                     >
                       <FileText className="h-4 w-4 mr-2" />
                       Set Question Paper
