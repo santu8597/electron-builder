@@ -135,6 +135,9 @@ export default function RightPanel({
     return sum + section.questions.reduce((sectionSum, q) => sectionSum + q.marks, 0)
   }, 0)
 
+  // Calculate total COs for percentage calculation
+  const totalCOs = Object.values(coCounts).reduce((sum, count) => sum + count, 0)
+
   // Get available groups that haven't been used yet
   const availableGroups = ALLOWED_GROUPS.filter(
     (group) => !paperSections.some((section) => section.title === `Group ${group}`)
@@ -166,14 +169,23 @@ export default function RightPanel({
           
           {/* CO Counters */}
           <div className="flex items-center gap-3 pl-6 border-l border-border">
-            {['CO1', 'CO2', 'CO3', 'CO4', 'CO5'].map(co => (
-              <div key={co} className="flex items-center gap-1.5">
-                <span className="text-xs font-medium text-neutral-gray">{co}:</span>
-                <span className={`text-sm font-semibold ${(coCounts[co] || 0) > 0 ? 'text-primary' : 'text-neutral-gray'}`}>
-                  {coCounts[co] || 0}
-                </span>
-              </div>
-            ))}
+            {['CO1', 'CO2', 'CO3', 'CO4', 'CO5'].map(co => {
+              const count = coCounts[co] || 0
+              const percentage = totalCOs > 0 ? ((count / totalCOs) * 100).toFixed(1) : '0.0'
+              return (
+                <div key={co} className="flex flex-col items-center gap-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-medium text-neutral-gray">{co}:</span>
+                    <span className={`text-sm font-semibold ${count > 0 ? 'text-primary' : 'text-neutral-gray'}`}>
+                      {count}
+                    </span>
+                  </div>
+                  <span className="text-xs text-neutral-gray">
+                    {percentage}%
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
 
