@@ -271,7 +271,7 @@
 
 /* Question HTML content styling for proper option display */
 .question-html-content {
-  white-space: pre-wrap;
+  white-space: normal;
   word-wrap: break-word;
   overflow-wrap: break-word;
   overflow: visible;
@@ -283,7 +283,7 @@
   display: block !important;
   margin-bottom: 0.5rem !important;
   margin-top: 0 !important;
-  white-space: pre-wrap;
+  white-space: normal;
 }
 
 /* Remove extra spacing at end */
