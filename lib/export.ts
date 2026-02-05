@@ -148,9 +148,6 @@ export async function exportToPDF(title: string, sections: Section[]): Promise<v
     }
 
     // Title and metadata
-    addWrappedText(title, 18, "bold")
-    yPosition += 3
-
     const totalMarks = sections.reduce((sum, section) => {
       return sum + section.questions.reduce((sectionSum, q) => sectionSum + q.marks, 0)
     }, 0)
@@ -226,13 +223,6 @@ export async function exportToWord(title: string, sections: Section[]): Promise<
     const totalQuestions = sections.reduce((sum, section) => sum + section.questions.length, 0)
 
     const sections_content = [
-      // Title
-      new Paragraph({
-        text: title,
-        heading: HeadingLevel.HEADING_1,
-        spacing: { after: 200 },
-      }),
-
       // Metadata
       new Paragraph({
         text: `Total Marks: ${totalMarks} | Questions: ${totalQuestions}`,
@@ -502,7 +492,6 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>${title}</title>
   <style>
     body { font-family: 'Cambria', serif; margin: 40px; line-height: 1.6; font-size: 14pt; }
     h1 { font-family: 'Cambria', serif; text-align: center; font-size: 24pt; margin-bottom: 10px; }
@@ -523,7 +512,6 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
   </style>
 </head>
 <body>
-  <h1>${title}</h1>
   <div class="metadata">
     <p><strong>Total Marks:</strong> ${totalMarks}</p>
   </div>
@@ -627,7 +615,6 @@ function generateHTMLForPandoc(title: string, sections: Section[]): string {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>${title}</title>
   <style>
     body { font-family: 'Cambria', serif; margin: 40px; line-height: 1.6; }
     h1 { font-family: 'Cambria', serif; text-align: center; font-size: 24pt; margin-bottom: 10px; }
@@ -645,7 +632,6 @@ function generateHTMLForPandoc(title: string, sections: Section[]): string {
   </style>
 </head>
 <body>
-  <h1>${title}</h1>
   <div class="metadata">
     <p><strong>Total Marks:</strong> ${totalMarks}</p>
   </div>
