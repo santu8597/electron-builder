@@ -492,29 +492,18 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="title" content="B.TECH/CSE/6TH SEM/CSEN 3233/2024">
+  <meta name="subtitle" content="MACHINE LEARNING">
+  <meta name="author" content="(CSEN 3233)">
   <style>
-    body { font-family: 'Cambria', serif; margin: 40px; line-height: 1.6; font-size: 14pt; }
-    h1 { font-family: 'Cambria', serif; text-align: center; font-size: 24pt; margin-bottom: 10px; }
-    .metadata { text-align: center; font-size: 12pt; margin-bottom: 20px; }
-    .section-title { font-family: 'Cambria', serif; font-size: 16pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
-    .subsection-title { font-family: 'Cambria', serif; font-size: 14pt; font-weight: bold; margin-top: 15px; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px; }
-    .instructions { font-style: italic; font-size: 12pt; margin-bottom: 10px; }
-    .question { margin-bottom: 15px; line-height: 1.8; white-space: pre-wrap; }
-    .question-number { font-weight: bold; margin-right: 8px; }
-    .marks { font-weight: bold; margin-left: 8px; }
-    p { margin: 8px 0; line-height: 1.6; white-space: pre-wrap; display: block; }
+    /* Minimal styling - let template.docx control fonts and sizes */
     table { border-collapse: collapse; margin: 10px 0; width: 100%; }
     table, th, td { border: 1px solid #333; padding: 8px; }
-    img { display: block; margin: 10px auto; }
-    .math-display { text-align: center; margin: 15px 0; font-size: 14pt; }
-    math { display: inline-block; margin: 5px; }
-    sup, sub { font-size: 0.8em; }
+    .math-display { text-align: center; margin: 15px 0; }
   </style>
 </head>
 <body>
-  <div class="metadata">
-    <p><strong>Total Marks:</strong> ${totalMarks}</p>
-  </div>
+  <p><strong>Total Marks:</strong> ${totalMarks}</p>
   <hr>
 `
 
@@ -528,12 +517,11 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
     // Skip section if no questions to export
     if (questionsToExport.length === 0) continue
     
-    html += `  <div class="section">
-    <h2 class="section-title">${section.title}</h2>
+    html += `  <h2>${section.title}</h2>
 `
     
     if (section.instructions) {
-      html += `    <p class="instructions">${section.instructions}</p>
+      html += `    <p><em>${section.instructions}</em></p>
 `
     }
 
@@ -615,36 +603,26 @@ function generateHTMLForPandoc(title: string, sections: Section[]): string {
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="title" content="B.TECH/CSE/6TH SEM/CSEN 3233/2024">
+  <meta name="subtitle" content="MACHINE LEARNING">
+  <meta name="author" content="(CSEN 3233)">
   <style>
-    body { font-family: 'Cambria', serif; margin: 40px; line-height: 1.6; }
-    h1 { font-family: 'Cambria', serif; text-align: center; font-size: 24pt; margin-bottom: 10px; }
-    .metadata { text-align: center; font-size: 11pt; margin-bottom: 20px; }
-    .section-title { font-family: 'Cambria', serif; font-size: 14pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; }
-    .subsection-title { font-family: 'Cambria', serif; font-size: 12pt; font-weight: bold; margin-top: 15px; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px; }
-    .instructions { font-style: italic; font-size: 10pt; margin-bottom: 10px; }
-    .question { margin-bottom: 15px; font-size: 11pt; line-height: 1.8; white-space: pre-wrap; }
-    .question-number { font-weight: bold; margin-right: 8px; }
-    .marks { font-weight: bold; margin-left: 8px; }
-    p { margin: 8px 0; line-height: 1.6; white-space: pre-wrap; display: block; }
+    /* Minimal styling - let template.docx control fonts and sizes */
     table { border-collapse: collapse; margin: 10px 0; }
     table, th, td { border: 1px solid #333; padding: 8px; }
-    img { max-width: 100%; height: auto; margin: 10px 0; }
   </style>
 </head>
 <body>
-  <div class="metadata">
-    <p><strong>Total Marks:</strong> ${totalMarks}</p>
-  </div>
+  <p><strong>Total Marks:</strong> ${totalMarks}</p>
   <hr>
 `
 
   sections.forEach((section) => {
-    html += `  <div class="section">
-    <h2 class="section-title">${section.title}</h2>
+    html += `  <h2>${section.title}</h2>
 `
     
     if (section.instructions) {
-      html += `    <p class="instructions">${section.instructions}</p>
+      html += `    <p><em>${section.instructions}</em></p>
 `
     }
 
