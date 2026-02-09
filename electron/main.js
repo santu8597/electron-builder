@@ -98,6 +98,20 @@ function createWindow() {
   if (isDev) {
     mainWindow.loadURL('http://localhost:3000');
     mainWindow.webContents.openDevTools();
+    
+    // Suppress harmless DevTools autofill warnings
+    mainWindow.webContents.on('devtools-opened', () => {
+      mainWindow.webContents.devToolsWebContents.executeJavaScript(`
+        const originalConsoleError = console.error;
+        console.error = (...args) => {
+          const msg = args.join(' ');
+          if (msg.includes('Autofill.enable') || msg.includes('Autofill.setAddresses')) {
+            return; // Suppress these harmless warnings
+          }
+          originalConsoleError.apply(console, args);
+        };
+      `);
+    });
   } else {
     mainWindow.loadFile(path.join(__dirname, '../out/index.html'));
   }
@@ -120,7 +134,7 @@ app.whenReady().then(() => {
           "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;",
           "img-src 'self' data: blob: https:;",
           "font-src 'self' data: https://cdn.jsdelivr.net;",
-          "connect-src 'self' blob: http://localhost:* ws://localhost:* https://gateway.pinata.cloud https://*.pinata.cloud;"
+          "connect-src 'self' blob: http://localhost:* ws://localhost:*;"
         ].join(' ')
       }
     });

@@ -1,5 +1,6 @@
 import type { Section } from "@/app/page"
 import { exportDocument } from "./electron-api"
+import { parseQuestionPaperHeader, generateHeaderHTML, getHeaderStyles, type ParsedHeader } from "./header-parser"
 
 /**
  * Convert blob URLs back to data URLs for export
@@ -426,7 +427,7 @@ function convertInlineMatricesToDisplay(text: string): string {
 /**
  * Generate clean export-ready HTML with only selected questions and raw LaTeX
  */
-async function generateCleanHTMLForExport(title: string, sections: Section[], selectedQuestionIds?: string[]): Promise<string> {
+async function generateCleanHTMLForExport(title: string, sections: Section[], selectedQuestionIds?: string[], parsedHeader?: ParsedHeader | null): Promise<string> {
   const totalMarks = sections.reduce((sum, section) => {
     return sum + section.questions.reduce((sectionSum, q) => sectionSum + q.marks, 0)
   }, 0)
@@ -498,6 +499,9 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
     return cleaned
   }
 
+  console.log('📄 Export - parsedHeader:', parsedHeader)
+  console.log('📄 Export - Will use:', parsedHeader ? 'STRUCTURED HEADER' : 'FALLBACK TITLE')
+
   let html = `<!DOCTYPE html>
 <html>
 <head>
@@ -520,15 +524,46 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
     .math-display { text-align: center; margin: 15px 0; font-size: 14pt; }
     math { display: inline-block; margin: 5px; }
     sup, sub { font-size: 0.8em; }
+    .paper-head-table { width: 100%; border-collapse: collapse; font-family: 'Times New Roman', serif; margin-bottom: 16px; border: none; }
+    .paper-head-table td { border: none; padding: 10px; vertical-align: middle; }
+    .paper-head-table tr { border: none; }
+    .center-head { text-align: center; line-height: 1.4; }
+    .left-meta { text-align: left; white-space: nowrap; }
+    .right-meta { text-align: right; white-space: nowrap; }
+    .note-cell { text-align: left; font-size: 13px; }
+    ${getHeaderStyles()}
   </style>
 </head>
 <body>
-  <h1>${title}</h1>
-  <div class="metadata">
-    <p><strong>Total Marks:</strong> ${totalMarks}</p>
-  </div>
-  <hr>
+  <table class="paper-head-table">
+    <tr>
+      <td></td>
+      <td class="center-head">
+        <div><strong>B.TECH/CSE/6TH SEM/CSEN 3233/2024</strong></div>
+        <div><strong>MACHINE LEARNING</strong></div>
+        <div><strong>(CSEN 3233)</strong></div>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td class="left-meta"><strong>Time Allotted :</strong> 2½ hrs</td>
+      <td></td>
+      <td class="right-meta"><strong>Full Marks :</strong> ${totalMarks}</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td class="note-cell">Figures out of the right margin indicate full marks.</td>
+      <td></td>
+    </tr>
+  </table>
+  <hr style="border: 1px solid #ccc; margin: 20px 0;">
 `
+  
+  console.log('🎯 Checking header in HTML:')
+  console.log('  - Contains "B.TECH/CSE"?', html.includes('B.TECH/CSE') ? '✅ YES' : '❌ NO')
+  console.log('  - Contains "MACHINE LEARNING"?', html.includes('MACHINE LEARNING') ? '✅ YES' : '❌ NO')
+  console.log('  - Contains "text-align: center"?', html.includes('text-align: center') ? '✅ YES' : '❌ NO')
+  console.log('🎯 Header section (chars 600-1200):', html.substring(600, 1200))
 
   for (const section of sections) {
     // Filter questions if selectedQuestionIds is provided
@@ -751,7 +786,8 @@ function toRomanNumeral(num: number): string {
 export async function exportToWordWithPandoc(
   title: string, 
   sections: Section[], 
-  selectedQuestionIds?: string[]
+  selectedQuestionIds?: string[],
+  parsedHeader?: ParsedHeader | null
 ): Promise<void> {
   try {
     // Convert all blob URLs to data URLs in question text before generating HTML
@@ -763,23 +799,82 @@ export async function exportToWordWithPandoc(
       })))
     })));
     
-    const html = await generateCleanHTMLForExport(title, sectionsWithDataUrls, selectedQuestionIds)
+    const html = await generateCleanHTMLForExport(title, sectionsWithDataUrls, selectedQuestionIds, parsedHeader)
     
     const filename = title.replace(/\s+/g, '_')
 
-    const blob = await exportDocument(html, 'docx', filename)
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${filename}.docx`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    // Try Electron/Pandoc export first
+    try {
+      const blob = await exportDocument(html, 'docx', filename)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${filename}.docx`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } catch (electronError: any) {
+      console.warn('Electron export not available, using browser fallback:', electronError.message)
+      // Browser fallback - export as HTML that Word can open
+      await exportToWordBrowser(html, filename)
+    }
   } catch (error: any) {
     console.error('Export to Word error:', error)
     throw new Error(error.message || 'Failed to export to Word')
   }
+}
+
+/**
+ * Browser-based Word export fallback
+ * Exports HTML with proper Word-compatible formatting
+ */
+async function exportToWordBrowser(html: string, filename: string): Promise<void> {
+  // Wrap HTML in Word-compatible format
+  const wordHtml = `
+<!DOCTYPE html>
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+  <meta charset='utf-8'>
+  <title>${filename}</title>
+  <!--[if gte mso 9]>
+  <xml>
+    <w:WordDocument>
+      <w:View>Print</w:View>
+      <w:Zoom>100</w:Zoom>
+      <w:DoNotOptimizeForBrowser/>
+    </w:WordDocument>
+  </xml>
+  <![endif]-->
+  <style>
+    @page {
+      size: A4;
+      margin: 1in;
+    }
+    body {
+      font-family: 'Times New Roman', serif;
+      font-size: 12pt;
+    }
+  </style>
+</head>
+<body>
+${html}
+</body>
+</html>
+  `.trim()
+  
+  const blob = new Blob([wordHtml], {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  })
+  
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${filename}.doc`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
 
 /**
@@ -788,11 +883,12 @@ export async function exportToWordWithPandoc(
 export async function exportToPDFWithPandoc(
   title: string, 
   sections: Section[], 
-  selectedQuestionIds?: string[]
+  selectedQuestionIds?: string[],
+  parsedHeader?: ParsedHeader | null
 ): Promise<void> {
   try {
     // Try browser-based PDF generation first (no server dependencies needed)
-    await exportToPDFBrowser(title, sections, selectedQuestionIds)
+    await exportToPDFBrowser(title, sections, selectedQuestionIds, parsedHeader)
   } catch (error: any) {
     console.error('Browser PDF export failed, trying pandoc:', error)
     
@@ -807,7 +903,7 @@ export async function exportToPDFWithPandoc(
         })))
       })));
       
-      const html = await generateCleanHTMLForExport(title, sectionsWithDataUrls, selectedQuestionIds)
+      const html = await generateCleanHTMLForExport(title, sectionsWithDataUrls, selectedQuestionIds, parsedHeader)
       const filename = title.replace(/\s+/g, '_')
 
       const blob = await exportDocument(html, 'pdf', filename)
@@ -821,7 +917,7 @@ export async function exportToPDFWithPandoc(
       URL.revokeObjectURL(url)
     } catch (pandocError: any) {
       // If all else fails, use browser method
-      await exportToPDFBrowser(title, sections, selectedQuestionIds)
+      await exportToPDFBrowser(title, sections, selectedQuestionIds, parsedHeader)
     }
   }
 }
@@ -832,7 +928,8 @@ export async function exportToPDFWithPandoc(
 async function exportToPDFBrowser(
   title: string, 
   sections: Section[], 
-  selectedQuestionIds?: string[]
+  selectedQuestionIds?: string[],
+  parsedHeader?: ParsedHeader | null
 ): Promise<void> {
   // Create a new window with the content
   const printWindow = window.open('', '_blank')
@@ -841,7 +938,7 @@ async function exportToPDFBrowser(
     throw new Error('Please allow popups to export PDF')
   }
 
-  const html = generateCleanHTMLForExport(title, sections, selectedQuestionIds)
+  const html = await generateCleanHTMLForExport(title, sections, selectedQuestionIds, parsedHeader)
   
   // Enhanced CSS for better PDF output with math support
   const enhancedCSS = `

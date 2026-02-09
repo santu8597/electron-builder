@@ -7,14 +7,8 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    // Redirect to login page on app launch
-    const isAuthenticated = localStorage.getItem("isAuthenticated")
-    
-    if (isAuthenticated) {
-      router.push("/dashboard")
-    } else {
-      router.push("/login")
-    }
+    // Redirect to question-setter page on app launch
+    router.push("/question-setter")
   }, [router])
 
   return (

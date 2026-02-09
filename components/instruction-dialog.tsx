@@ -48,7 +48,7 @@ export default function InstructionDialog({ open, onAccept, onCancel }: Instruct
             </div>
 
             <div className="text-sm text-gray-600 italic mt-3">
-              Click "Accept" to proceed or "Cancel" to return to login.
+              Click "Accept" to proceed or "Cancel" to exit.
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>

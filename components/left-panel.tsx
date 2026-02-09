@@ -7,6 +7,7 @@ import { useState, useRef, useEffect } from "react"
 import { parseDocxFile } from "@/lib/parser"
 import type { Section, ParsedQuestion } from "@/app/page"
 import QuestionCard from "./question-card"
+import type { ParsedHeader } from "@/lib/header-parser"
 
 interface LeftPanelProps {
   parsedContent: Section[]
@@ -15,7 +16,7 @@ interface LeftPanelProps {
   selectedQuestions?: ParsedQuestion[]
   paperSections?: Section[]
   setPaperSections?: (sections: Section[]) => void
-  pinataUrl?: string | null
+  setParsedHeader?: (header: ParsedHeader | null) => void
 }
 
 export default function LeftPanel({ 
@@ -25,64 +26,12 @@ export default function LeftPanel({
   selectedQuestions = [],
   paperSections = [],
   setPaperSections,
-  pinataUrl
+  setParsedHeader
 }: LeftPanelProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [uploadedFileName, setUploadedFileName] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // Fetch from Pinata on mount if URL is provided
-  useEffect(() => {
-    if (pinataUrl && parsedContent.length === 0) {
-      fetchFromPinata(pinataUrl)
-    }
-  }, [pinataUrl])
-
-  const fetchFromPinata = async (url: string) => {
-    setIsLoading(true)
-    setError("")
-    setUploadedFileName("Question Bank from Pinata")
-
-    try {
-      console.log("Fetching from Pinata URL:", url)
-      
-      // Try direct fetch first (Pinata gateway allows CORS)
-      const response = await fetch(url, {
-        method: "GET",
-        cache: "no-cache"
-      })
-      
-      console.log("Response status:", response.status)
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch file from Pinata: ${response.status} ${response.statusText}`)
-      }
-
-      const blob = await response.blob()
-      console.log("Blob received, size:", blob.size, "type:", blob.type)
-      
-      if (blob.size === 0) {
-        throw new Error("Received empty file from Pinata")
-      }
-      
-      const file = new File([blob], "questions.docx", {
-        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      })
-
-      const parsed = await parseDocxFile(file)
-      console.log("Parsed successfully, sections:", parsed.length)
-      setParsedContent(parsed)
-      setError("")
-    } catch (err) {
-      console.error("Pinata fetch error:", err)
-      setError(err instanceof Error ? err.message : "Failed to fetch from Pinata. Please try uploading the file manually.")
-      setParsedContent([])
-      setUploadedFileName("")
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -98,8 +47,18 @@ export default function LeftPanel({
     setUploadedFileName(file.name)
 
     try {
-      const parsed = await parseDocxFile(file)
-      setParsedContent(parsed)
+      const result = await parseDocxFile(file)
+      console.log('📤 Left Panel - Received parsed result:', {
+        sections: result.sections?.length,
+        header: result.header
+      })
+      setParsedContent(result.sections)
+      if (setParsedHeader) {
+        console.log('📤 Setting parsedHeader in parent:', result.header)
+        setParsedHeader(result.header)
+      } else {
+        console.log('⚠️ setParsedHeader function not provided')
+      }
       setError("")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to parse document")
@@ -129,8 +88,11 @@ export default function LeftPanel({
       setError("")
       setUploadedFileName(file.name)
       try {
-        const parsed = await parseDocxFile(file)
-        setParsedContent(parsed)
+        const result = await parseDocxFile(file)
+        setParsedContent(result.sections)
+        if (setParsedHeader) {
+          setParsedHeader(result.header)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to parse document")
         setParsedContent([])

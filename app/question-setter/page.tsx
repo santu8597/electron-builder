@@ -6,6 +6,7 @@ import Header from "@/components/header"
 import LeftPanel from "@/components/left-panel"
 import RightPanel from "@/components/right-panel"
 import { exportToPDFWithPandoc, exportToWordWithPandoc } from "@/lib/export"
+import type { ParsedHeader } from "@/lib/header-parser"
 
 // Declare MathJax type
 declare global {
@@ -66,29 +67,23 @@ export default function QuestionSetterPage() {
   const [paperSections, setPaperSections] = useState<Section[]>([])
   const [draftTitle, setDraftTitle] = useState("Question Paper")
   const [isExporting, setIsExporting] = useState(false)
-  const [pinataUrl, setPinataUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    // Get selected subject from localStorage
-    const selectedSubjectData = localStorage.getItem("selectedSubject")
-    if (selectedSubjectData) {
-      try {
-        const subject = JSON.parse(selectedSubjectData)
-        if (subject.questionPaper?.pinataUrl) {
-          setPinataUrl(subject.questionPaper.pinataUrl)
-          setDraftTitle(subject.name || "Question Paper")
-        }
-      } catch (err) {
-        console.error("Failed to parse subject data:", err)
-      }
-    }
-  }, [])
+  const [parsedHeader, setParsedHeader] = useState<ParsedHeader | null>(null)
 
   const handleExportPDF = async () => {
     setIsExporting(true)
+    console.log('🚀 Export PDF - parsedHeader:', parsedHeader)
+    if (parsedHeader) {
+      console.log('✅ Using STRUCTURED HEADER')
+      console.log('  - Semester:', parsedHeader.semesterLine)
+      console.log('  - Subject:', parsedHeader.subject)
+      console.log('  - Code:', parsedHeader.code)
+      console.log('  - Time/Marks:', parsedHeader.timeAllotted, '/', parsedHeader.fullMarks)
+    } else {
+      console.log('⚠️ No header detected - using fallback')
+    }
     try {
       const selectedIds = selectedQuestions.map(q => q.uniqueId || q.id)
-      await exportToPDFWithPandoc(draftTitle, paperSections, selectedIds)
+      await exportToPDFWithPandoc(draftTitle, paperSections, selectedIds, parsedHeader)
     } catch (error) {
       console.error("Export to PDF failed:", error)
     } finally {
@@ -98,9 +93,19 @@ export default function QuestionSetterPage() {
 
   const handleExportWord = async () => {
     setIsExporting(true)
+    console.log('🚀 Export Word - parsedHeader:', parsedHeader)
+    if (parsedHeader) {
+      console.log('✅ Using STRUCTURED HEADER')
+      console.log('  - Semester:', parsedHeader.semesterLine)
+      console.log('  - Subject:', parsedHeader.subject)
+      console.log('  - Code:', parsedHeader.code)
+      console.log('  - Time/Marks:', parsedHeader.timeAllotted, '/', parsedHeader.fullMarks)
+    } else {
+      console.log('⚠️ No header detected - using fallback')
+    }
     try {
       const selectedIds = selectedQuestions.map(q => q.uniqueId || q.id)
-      await exportToWordWithPandoc(draftTitle, paperSections, selectedIds)
+      await exportToWordWithPandoc(draftTitle, paperSections, selectedIds, parsedHeader)
     } catch (error) {
       console.error("Export to Word failed:", error)
     } finally {
@@ -124,7 +129,7 @@ export default function QuestionSetterPage() {
           selectedQuestions={selectedQuestions}
           paperSections={paperSections}
           setPaperSections={setPaperSections}
-          pinataUrl={pinataUrl}
+          setParsedHeader={setParsedHeader}
         />
         <RightPanel 
           selectedQuestions={selectedQuestions}

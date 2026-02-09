@@ -1,6 +1,7 @@
 import type { Section, ParsedQuestion } from "@/app/page"
 import { parseGroupA, parseMCQQuestions, parseFillInBlanksQuestions } from "./group-a-parser"
 import { convertDocx } from "./electron-api"
+import { parseQuestionPaperHeader, removeHeaderFromHTML, type ParsedHeader } from "./header-parser"
 
 /**
  * Generate a unique ID for a question based on group, section, and number
@@ -954,10 +955,10 @@ function cleanQuestionText(text: string): string {
  * Parse a DOCX file and extract questions in a structured format
  * Uses Pandoc when available for better math/table/image support, falls back to Mammoth
  */
-export async function parseDocxFile(file: File): Promise<Section[]> {
+export async function parseDocxFile(file: File): Promise<{ sections: Section[], header: ParsedHeader | null }> {
   try {
     // Convert DOCX to HTML using Pandoc or Mammoth
-    const htmlContent = await convertDocxToHtml(file)
+    let htmlContent = await convertDocxToHtml(file)
     
     // Save HTML output for debugging
     console.log('=== HTML Output from Conversion ===')
@@ -965,9 +966,22 @@ export async function parseDocxFile(file: File): Promise<Section[]> {
     console.log(htmlContent.substring(0, 2000))
     console.log('\n=== End of Preview ===')
     
+    // Extract header information before parsing the main content
+    const parsedHeader = parseQuestionPaperHeader(htmlContent)
+    console.log('Parsed header:', parsedHeader)
+    
+    // Remove header content from HTML to avoid duplication in questions
+    if (parsedHeader) {
+      htmlContent = removeHeaderFromHTML(htmlContent, parsedHeader)
+      console.log('Header removed from HTML content')
+    }
+    
     // Save to localStorage for inspection
     try {
       localStorage.setItem('last_parsed_html', htmlContent)
+      if (parsedHeader) {
+        localStorage.setItem('last_parsed_header', JSON.stringify(parsedHeader))
+      }
       console.log('Full HTML saved to localStorage as "last_parsed_html"')
       console.log('To view: localStorage.getItem("last_parsed_html")')
     } catch (e) {
@@ -975,7 +989,8 @@ export async function parseDocxFile(file: File): Promise<Section[]> {
     }
     
     // Parse the HTML content
-    return parseHtmlContent(htmlContent)
+    const sections = parseHtmlContent(htmlContent)
+    return { sections, header: parsedHeader }
   } catch (error) {
     throw new Error("Failed to parse DOCX file. Make sure it's a valid Word document.")
   }

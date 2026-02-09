@@ -17,14 +17,27 @@ declare global {
   }
 }
 
-// Document conversion using Electron IPC
+// Check if running in Electron environment
+export function isElectron(): boolean {
+  return typeof window !== 'undefined' && window.electron !== undefined;
+}
+
+// Document conversion using Electron IPC (with browser fallback)
 export async function convertDocx(file: File): Promise<{ html: string; method: string }> {
+  if (!isElectron()) {
+    // Fallback to browser-based conversion (will be handled by mammoth in parser.ts)
+    throw new Error('Electron API not available, using browser fallback');
+  }
   const buffer = await file.arrayBuffer();
   return await window.electron.convertDocx(buffer, file.name);
 }
 
-// Document export using Electron IPC
+// Document export using Electron IPC (with browser fallback)
 export async function exportDocument(html: string, format: 'pdf' | 'docx', filename: string): Promise<Blob> {
+  if (!isElectron()) {
+    // Browser fallback - throw error to trigger browser-based export methods
+    throw new Error('Electron API not available. Please use browser-based export methods.');
+  }
   const buffer = await window.electron.exportDocument(html, format, filename);
   return new Blob([buffer], {
     type: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'

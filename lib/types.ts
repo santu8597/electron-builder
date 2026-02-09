@@ -22,10 +22,20 @@ export interface Section {
   questions: ParsedQuestion[]
 }
 
+export interface ParsedHeader {
+  semesterLine: string
+  subject: string
+  code: string
+  timeAllotted: string
+  fullMarks: string
+  note: string
+}
+
 export interface QuestionPaper {
   id: string
   title: string
   totalMarks: number
   sections: Section[]
   instructions?: string
+  header?: ParsedHeader | null
 }
