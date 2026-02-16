@@ -27,4 +27,11 @@ contextBridge.exposeInMainWorld('electron', {
   showWarningDialog: async (options) => {
     return await ipcRenderer.invoke('show-warning-dialog', options);
   },
+  // Secure API calls (proxied through main process to avoid CSP issues)
+  apiLogin: async (email, password) => {
+    return await ipcRenderer.invoke('api-login', email, password);
+  },
+  apiDashboard: async (email, token) => {
+    return await ipcRenderer.invoke('api-dashboard', email, token);
+  },
 });

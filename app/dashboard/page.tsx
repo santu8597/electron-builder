@@ -76,21 +76,11 @@ export default function DashboardPage() {
   const fetchDashboardData = async (email: string, token: string) => {
     try {
       setIsLoading(true)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/dashboard`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          token,
-        }),
-      })
+      // Use IPC to make secure API call through Electron main process
+      const response = await (window as any).electron.apiDashboard(email, token)
 
-      const data: DashboardResponse = await response.json()
-
-      if (response.ok && data.success) {
-        setSubjects(data.assignedSubjects)
+      if (response.ok && response.data.success) {
+        setSubjects(response.data.assignedSubjects)
       } else {
         setError("Failed to load subjects")
       }

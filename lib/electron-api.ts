@@ -13,6 +13,8 @@ declare global {
       showErrorDialog: (options: { title?: string; message: string; detail?: string }) => Promise<void>;
       showInfoDialog: (options: { title?: string; message: string; detail?: string }) => Promise<void>;
       showWarningDialog: (options: { title?: string; message: string; detail?: string }) => Promise<void>;
+      apiLogin: (email: string, password: string) => Promise<{ ok: boolean; status: number; data: any }>;
+      apiDashboard: (email: string, token: string) => Promise<{ ok: boolean; status: number; data: any }>;
     };
   }
 }

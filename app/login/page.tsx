@@ -32,24 +32,14 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      })
+      // Use IPC to make secure API call through Electron main process
+      const response = await (window as any).electron.apiLogin(email, password)
 
-      const data: LoginResponse = await response.json()
-
-      if (response.ok && data.success) {
+      if (response.ok && response.data.success) {
         // Store authentication token and user data
-        localStorage.setItem("token", data.token)
+        localStorage.setItem("token", response.data.token)
         localStorage.setItem("isAuthenticated", "true")
-        localStorage.setItem("moderator", JSON.stringify(data.moderator))
+        localStorage.setItem("moderator", JSON.stringify(response.data.moderator))
         
         // Navigate to dashboard
         router.push("/dashboard")

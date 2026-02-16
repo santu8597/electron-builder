@@ -8,6 +8,9 @@ const { promisify } = require('util');
 const execAsync = promisify(exec);
 const isDev = process.env.NODE_ENV === 'development';
 
+// Backend API URL (moved from .env.local to main process for security)
+const BACKEND_URL = 'https://admin-lkfe.vercel.app';
+
 let mainWindow;
 
 // Get bundled pandoc path
@@ -216,6 +219,124 @@ ipcMain.handle('show-warning-dialog', async (event, options) => {
     detail: detail,
     buttons: ['OK']
   });
+});
+
+// ============= Secure API Handlers =============
+// All external API calls are proxied through the main process
+// to maintain strict CSP in the renderer process
+
+// Handler for login API call
+ipcMain.handle('api-login', async (event, email, password) => {
+  console.log('Processing login request...');
+  
+  try {
+    const https = require('https');
+    const url = new URL(`${BACKEND_URL}/api/login`);
+    
+    const postData = JSON.stringify({ email, password });
+    
+    const options = {
+      hostname: url.hostname,
+      port: url.port || 443,
+      path: url.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    };
+    
+    return new Promise((resolve, reject) => {
+      const req = https.request(options, (res) => {
+        let data = '';
+        
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        
+        res.on('end', () => {
+          try {
+            const jsonData = JSON.parse(data);
+            resolve({
+              ok: res.statusCode >= 200 && res.statusCode < 300,
+              status: res.statusCode,
+              data: jsonData
+            });
+          } catch (error) {
+            reject(new Error('Failed to parse response'));
+          }
+        });
+      });
+      
+      req.on('error', (error) => {
+        console.error('Login API error:', error);
+        reject(error);
+      });
+      
+      req.write(postData);
+      req.end();
+    });
+  } catch (error) {
+    console.error('Login handler error:', error);
+    throw error;
+  }
+});
+
+// Handler for dashboard API call
+ipcMain.handle('api-dashboard', async (event, email, token) => {
+  console.log('Processing dashboard request...');
+  
+  try {
+    const https = require('https');
+    const url = new URL(`${BACKEND_URL}/api/dashboard`);
+    
+    const postData = JSON.stringify({ email, token });
+    
+    const options = {
+      hostname: url.hostname,
+      port: url.port || 443,
+      path: url.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    };
+    
+    return new Promise((resolve, reject) => {
+      const req = https.request(options, (res) => {
+        let data = '';
+        
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        
+        res.on('end', () => {
+          try {
+            const jsonData = JSON.parse(data);
+            resolve({
+              ok: res.statusCode >= 200 && res.statusCode < 300,
+              status: res.statusCode,
+              data: jsonData
+            });
+          } catch (error) {
+            reject(new Error('Failed to parse response'));
+          }
+        });
+      });
+      
+      req.on('error', (error) => {
+        console.error('Dashboard API error:', error);
+        reject(error);
+      });
+      
+      req.write(postData);
+      req.end();
+    });
+  } catch (error) {
+    console.error('Dashboard handler error:', error);
+    throw error;
+  }
 });
 
 // ============= Document Conversion Functions =============
