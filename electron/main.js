@@ -538,32 +538,13 @@ async function exportWithPandoc(html, format, filename) {
         );
       }
     } else if (format === 'docx') {
-      // Get the template path (works in both dev and production)
-      const templatePath = isDev 
-        ? path.join(__dirname, '..', 'helpers', 'template.docx')
-        : path.join(process.resourcesPath, 'helpers', 'template.docx');
-      
-      console.log('Template path:', templatePath);
-      console.log('Template exists:', fs.existsSync(templatePath));
-      
       // Use --dpi=96 to ensure Pandoc uses standard screen DPI for image conversion
-      // Use --reference-doc to apply template formatting including center alignment
-      // Use --standalone to enable metadata processing
-      // Pass metadata for Title, Subtitle, and Author to map to template.docx fields
-      const metadataArgs = '--metadata title="B.TECH/CSE/6TH SEM/CSEN 3233/2024" --metadata subtitle="MACHINE LEARNING" --metadata author="(CSEN 3233)"';
-      
-      if (fs.existsSync(templatePath)) {
-        console.log('Using reference document:', templatePath);
-        console.log('Executing Pandoc command...');
-        const cmd = `"${PANDOC_EXECUTABLE}" "${inputFile}" -f html+tex_math_dollars -t docx -o "${outputFile}" --mathml --dpi=96 --standalone --reference-doc="${templatePath}" ${metadataArgs}`;
-        console.log('Command:', cmd);
-        const result = await execAsync(cmd);
-        console.log('Pandoc stdout:', result.stdout);
-        console.log('Pandoc stderr:', result.stderr);
-      } else {
-        console.warn('Template not found, using default formatting');
-        await execAsync(`"${PANDOC_EXECUTABLE}" "${inputFile}" -f html+tex_math_dollars -t docx -o "${outputFile}" --mathml --dpi=96 --standalone ${metadataArgs}`);
-      }
+      console.log('Executing Pandoc command...');
+      const cmd = `"${PANDOC_EXECUTABLE}" "${inputFile}" -f html+tex_math_dollars -t docx -o "${outputFile}" --mathml --dpi=96`;
+      console.log('Command:', cmd);
+      const result = await execAsync(cmd);
+      console.log('Pandoc stdout:', result.stdout);
+      console.log('Pandoc stderr:', result.stderr);
     } else {
       throw new Error('Unsupported format. Use "pdf" or "docx"');
     }

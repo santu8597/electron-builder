@@ -492,18 +492,63 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="title" content="B.TECH/CSE/6TH SEM/CSEN 3233/2024">
-  <meta name="subtitle" content="MACHINE LEARNING">
-  <meta name="author" content="(CSEN 3233)">
   <style>
     /* Minimal styling - let template.docx control fonts and sizes */
     table { border-collapse: collapse; margin: 10px 0; width: 100%; }
     table, th, td { border: 1px solid #333; padding: 8px; }
     .math-display { text-align: center; margin: 15px 0; }
+    .header-table { border: 2px solid red !important; }
+    .header-table td { 
+      border: 2px solid red !important; 
+      border-top: 2px solid red !important;
+      border-bottom: 2px solid red !important;
+      border-left: 2px solid red !important;
+      border-right: 2px solid red !important;
+    }
   </style>
 </head>
 <body>
-  <p><strong>Total Marks:</strong> ${totalMarks}</p>
+  <table class="header-table" style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; margin-bottom: 20px; border: 2px solid red;">
+    <tr>
+      <td style="border: 2px solid red; padding: 10px; width: 33%;"></td>
+      <td style="border: 2px solid red; padding: 10px; text-align: center; width: 34%;">
+        <strong style="font-size: 14px;">B.TECH/CSE/6TH SEM/CSEN 3233/2024</strong>
+      </td>
+      <td style="border: 2px solid red; padding: 10px; width: 33%;"></td>
+    </tr>
+    <tr>
+      <td style="border: 2px solid red; padding: 10px;"></td>
+      <td style="border: 2px solid red; padding: 10px; text-align: center;">
+        <strong style="font-size: 20px;">MACHINE LEARNING</strong><br>
+        <strong style="font-size: 16px;">(CSEN 3233)</strong>
+      </td>
+      <td style="border: 2px solid red; padding: 10px;"></td>
+    </tr>
+    <tr>
+      <td style="border: 2px solid red; padding: 10px; text-align: left;"><strong>Time Allotted : 2½ hrs</strong></td>
+      <td style="border: 2px solid red; padding: 10px;"></td>
+      <td style="border: 2px solid red; padding: 10px; text-align: right;"><strong>Full Marks : 60</strong></td>
+    </tr>
+  </table>
+
+  <table class="header-table" style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; margin-bottom: 20px; border: 2px solid red;">
+    <tr>
+      <td style="border: 2px solid red; padding: 10px; width: 25%;"></td>
+      <td style="border: 2px solid red; padding: 10px; text-align: center; width: 50%;"><strong>Figures out of the right margin indicate full marks.</strong></td>
+      <td style="border: 2px solid red; padding: 10px; width: 25%;"></td>
+    </tr>
+    <tr>
+      <td style="border: 2px solid red; padding: 10px;"></td>
+      <td style="border: 2px solid red; padding: 10px; text-align: center;"><strong>Candidates are required to answer Group A and any 4 (four) from Group B to E, taking one from each group.</strong></td>
+      <td style="border: 2px solid red; padding: 10px;"></td>
+    </tr>
+    <tr>
+      <td style="border: 2px solid red; padding: 10px;"></td>
+      <td style="border: 2px solid red; padding: 10px; text-align: center;"><strong>Candidates are required to give answer in their own words as far as practicable.</strong></td>
+      <td style="border: 2px solid red; padding: 10px;"></td>
+    </tr>
+  </table>
+
   <hr>
 `
 
@@ -603,18 +648,61 @@ function generateHTMLForPandoc(title: string, sections: Section[]): string {
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="title" content="B.TECH/CSE/6TH SEM/CSEN 3233/2024">
-  <meta name="subtitle" content="MACHINE LEARNING">
-  <meta name="author" content="(CSEN 3233)">
   <style>
     /* Minimal styling - let template.docx control fonts and sizes */
     table { border-collapse: collapse; margin: 10px 0; }
     table, th, td { border: 1px solid #333; padding: 8px; }
+    .header-table { border: 2px solid red !important; }
+    .header-table td { 
+      border: 2px solid red !important; 
+      border-top: 2px solid red !important;
+      border-bottom: 2px solid red !important;
+      border-left: 2px solid red !important;
+      border-right: 2px solid red !important;
+    }
   </style>
 </head>
 <body>
-  <p><strong>Total Marks:</strong> ${totalMarks}</p>
-  <hr>
+  <table class="header-table" style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; margin-bottom: 20px; border: 2px solid red;">
+    <tr>
+      <td style="border: 2px solid red; padding: 10px; width: 33%;"></td>
+      <td style="border: 2px solid red; padding: 10px; text-align: center; width: 34%;">
+        <strong style="font-size: 14px;">B.TECH/CSE/6TH SEM/CSEN 3233/2024</strong>
+      </td>
+      <td style="border: 2px solid red; padding: 10px; width: 33%;"></td>
+    </tr>
+    <tr>
+      <td style="border: 2px solid red; padding: 10px;"></td>
+      <td style="border: 2px solid red; padding: 10px; text-align: center;">
+        <strong style="font-size: 20px;">MACHINE LEARNING</strong><br>
+        <strong style="font-size: 16px;">(CSEN 3233)</strong>
+      </td>
+      <td style="border: 2px solid red; padding: 10px;"></td>
+    </tr>
+    <tr>
+      <td style="border: 2px solid red; padding: 10px; text-align: left;"><strong>Time Allotted : 2½ hrs</strong></td>
+      <td style="border: 2px solid red; padding: 10px;"></td>
+      <td style="border: 2px solid red; padding: 10px; text-align: right;"><strong>Full Marks : 60</strong></td>
+    </tr>
+  </table>
+
+  <table class="header-table" style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; margin-bottom: 20px; border: 2px solid red;">
+    <tr>
+      <td style="border: 2px solid red; padding: 10px; width: 25%;"></td>
+      <td style="border: 2px solid red; padding: 10px; text-align: center; width: 50%;"><strong>Figures out of the right margin indicate full marks.</strong></td>
+      <td style="border: 2px solid red; padding: 10px; width: 25%;"></td>
+    </tr>
+    <tr>
+      <td style="border: 2px solid red; padding: 10px;"></td>
+      <td style="border: 2px solid red; padding: 10px; text-align: center;"><strong>Candidates are required to answer Group A and any 4 (four) from Group B to E, taking one from each group.</strong></td>
+      <td style="border: 2px solid red; padding: 10px;"></td>
+    </tr>
+    <tr>
+      <td style="border: 2px solid red; padding: 10px;"></td>
+      <td style="border: 2px solid red; padding: 10px; text-align: center;"><strong>Candidates are required to give answer in their own words as far as practicable.</strong></td>
+      <td style="border: 2px solid red; padding: 10px;"></td>
+    </tr>
+  </table>
 `
 
   sections.forEach((section) => {
