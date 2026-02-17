@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -73,6 +73,21 @@ function findPandocExecutable() {
 
 const PANDOC_EXECUTABLE = findPandocExecutable();
 
+// Register custom protocol for serving static files in production
+if (!isDev) {
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: 'app',
+      privileges: {
+        secure: true,
+        standard: true,
+        supportFetchAPI: true,
+        corsEnabled: true
+      }
+    }
+  ]);
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -102,7 +117,7 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:3000');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../out/index.html'));
+    mainWindow.loadURL('app://./index.html');
   }
 
   mainWindow.on('closed', () => {
@@ -111,6 +126,22 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Register custom protocol handler for production builds
+  if (!isDev) {
+    protocol.handle('app', (request) => {
+      const url = request.url.slice('app://'.length);
+      const filePath = path.normalize(path.join(__dirname, '../out', decodeURIComponent(url)));
+      
+      // Security: prevent directory traversal
+      const outPath = path.normalize(path.join(__dirname, '../out'));
+      if (!filePath.startsWith(outPath)) {
+        return new Response('Forbidden', { status: 403 });
+      }
+      
+      return net.fetch('file://' + filePath);
+    });
+  }
+
   // Set Content Security Policy
   const { session } = require('electron');
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
@@ -118,12 +149,12 @@ app.whenReady().then(() => {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self';",
+          "default-src 'self' app:;",
           "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;",
           "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;",
-          "img-src 'self' data: blob: https:;",
-          "font-src 'self' data: https://cdn.jsdelivr.net;",
-          "connect-src 'self' blob: http://localhost:* ws://localhost:* https://gateway.pinata.cloud https://*.pinata.cloud;"
+          "img-src 'self' data: blob: https: app:;",
+          "font-src 'self' data: https://cdn.jsdelivr.net app:;",
+          "connect-src 'self' blob: http://localhost:* ws://localhost:* https://gateway.pinata.cloud https://*.pinata.cloud app:;"
         ].join(' ')
       }
     });
