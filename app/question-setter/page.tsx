@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Header from "@/components/header"
 import LeftPanel from "@/components/left-panel"
 import RightPanel from "@/components/right-panel"
-import { exportToPDFWithPandoc, exportToWordWithPandoc } from "@/lib/export"
+import { exportToWordWithPandoc } from "@/lib/export"
 
 // Declare MathJax type
 declare global {
@@ -84,18 +84,6 @@ export default function QuestionSetterPage() {
     }
   }, [])
 
-  const handleExportPDF = async () => {
-    setIsExporting(true)
-    try {
-      const selectedIds = selectedQuestions.map(q => q.uniqueId || q.id)
-      await exportToPDFWithPandoc(draftTitle, paperSections, selectedIds)
-    } catch (error) {
-      console.error("Export to PDF failed:", error)
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
   const handleExportWord = async () => {
     setIsExporting(true)
     try {
@@ -113,7 +101,6 @@ export default function QuestionSetterPage() {
       <Header
         draftTitle={draftTitle}
         setDraftTitle={setDraftTitle}
-        onExportPDF={handleExportPDF}
         onExportWord={handleExportWord}
       />
       <div className="flex flex-1 overflow-hidden">

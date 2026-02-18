@@ -26,16 +26,6 @@ export default function PreviewModal({ title, sections, onClose }: PreviewModalP
     return sum + section.questions.reduce((sectionSum, q) => sectionSum + q.marks, 0)
   }, 0)
 
-  const handleExportPDF = () => {
-    // Placeholder for PDF export
-    alert("PDF export coming soon!")
-  }
-
-  const handleExportWord = () => {
-    // Placeholder for Word export
-    alert("Word export coming soon!")
-  }
-
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">

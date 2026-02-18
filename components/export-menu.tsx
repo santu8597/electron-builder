@@ -3,12 +3,11 @@
 import { Download, FileText } from "lucide-react"
 
 interface ExportMenuProps {
-  onExportPDF?: () => void
   onExportWord?: () => void
   onClose: () => void
 }
 
-export default function ExportMenu({ onExportPDF, onExportWord, onClose }: ExportMenuProps) {
+export default function ExportMenu({ onExportWord, onClose }: ExportMenuProps) {
   return (
     <div className="absolute right-0 mt-2 w-48 bg-white border border-border rounded-lg shadow-lg z-50">
 

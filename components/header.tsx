@@ -8,11 +8,10 @@ interface HeaderProps {
   draftTitle: string
   setDraftTitle: (title: string) => void
   onSaveDraft?: () => void
-  onExportPDF?: () => void
   onExportWord?: () => void
 }
 
-export default function Header({ draftTitle, setDraftTitle, onSaveDraft, onExportPDF, onExportWord }: HeaderProps) {
+export default function Header({ draftTitle, setDraftTitle, onSaveDraft, onExportWord }: HeaderProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [tempTitle, setTempTitle] = useState(draftTitle)
   const [showExportMenu, setShowExportMenu] = useState(false)
@@ -76,7 +75,6 @@ export default function Header({ draftTitle, setDraftTitle, onSaveDraft, onExpor
 
             {showExportMenu && (
               <ExportMenu
-                onExportPDF={onExportPDF}
                 onExportWord={onExportWord}
                 onClose={() => setShowExportMenu(false)}
               />
