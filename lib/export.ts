@@ -352,22 +352,22 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
   <table class="header-table" border="1" style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; margin-bottom: 20px; border: 1px solid black;">
     <tr>
       <td style="border: 1px solid black; padding: 10px; width: 25%;"></td>
-      <td style="border: 1px solid black; padding: 10px; text-align: center; width: 50%;"><strong>Figures out of the right margin indicate full marks.</strong></td>
+      <td style="border: 1px solid black; padding: 10px; text-align: center; width: 50%;"><strong><em>Figures out of the right margin indicate full marks.</em></strong></td>
       <td style="border: 1px solid black; padding: 10px; width: 25%;"></td>
     </tr>
     <tr>
       <td style="border: 1px solid black; padding: 10px;"></td>
-      <td style="border: 1px solid black; padding: 10px; text-align: center;"><strong>Candidates are required to answer Group A and any 4 (four) from Group B to E, taking one from each group.</strong></td>
+      <td style="border: 1px solid black; padding: 10px; text-align: center;"><strong><em>Candidates are required to answer Group A and any 4 (four) from Group B to E, taking one from each group.</em></strong></td>
       <td style="border: 1px solid black; padding: 10px;"></td>
     </tr>
     <tr>
       <td style="border: 1px solid black; padding: 10px;"></td>
-      <td style="border: 1px solid black; padding: 10px; text-align: center;"><strong>Candidates are required to give answer in their own words as far as practicable.</strong></td>
+      <td style="border: 1px solid black; padding: 10px; text-align: center;"><strong><em>Candidates are required to give answer in their own words as far as practicable.</em></strong></td>
       <td style="border: 1px solid black; padding: 10px;"></td>
     </tr>
   </table>
 
-  <hr>
+ 
 `
 
   for (const section of sections) {
