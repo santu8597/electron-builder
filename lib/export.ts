@@ -328,11 +328,11 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
 <body>
   <table class="header-table" border="1" style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; margin-bottom: 20px; border: 1px solid black;">
     <tr>
-      <td style="border: 1px solid black; padding: 10px; width: 33%;"></td>
-      <td style="border: 1px solid black; padding: 10px; text-align: center; width: 34%;">
+      <td style="border: 1px solid black; padding: 10px; width: 25%;"></td>
+      <td style="border: 1px solid black; padding: 10px; text-align: center; width: 50%;">
         <strong style="font-size: 14px;">B.TECH/CSE/6TH SEM/CSEN 3233/2024</strong>
       </td>
-      <td style="border: 1px solid black; padding: 10px; width: 33%;"></td>
+      <td style="border: 1px solid black; padding: 10px; width: 25%;"></td>
     </tr>
     <tr>
       <td style="border: 1px solid black; padding: 10px;"></td>
@@ -367,6 +367,26 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
     </tr>
   </table>
 
+  <table class="header-table" border="1" style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; margin-bottom: 20px; border: 1px solid black;">
+    <tr>
+      <td style="border: 1px solid black; padding: 10px; width: 25%;"></td>
+      <td style="border: 1px solid black; padding: 10px; text-align: center; width: 50%;"><strong>GROUP-A</strong></td>
+      <td style="border: 1px solid black; padding: 10px; width: 25%;"></td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid black; padding: 10px; text-align: left; width: 25%;">1. Answer any twelve</td>
+      <td style="border: 1px solid black; padding: 10px; width: 50%;"></td>
+      <td style="border: 1px solid black; padding: 10px; text-align: right; width: 25%;"><strong>1 x 12</strong></td>
+    </tr>
+   
+
+    <tr>
+      <td style="border: 1px solid black; padding: 10px;"></td>
+      <td style="border: 1px solid black; padding: 10px; text-align: center;"><em>Choose the correct alternative for the following</em></td>
+      <td style="border: 1px solid black; padding: 10px;"></td>
+    </tr>
+  </table>
+
  
 `
 
@@ -380,14 +400,6 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
     // Skip section if no questions to export
     if (questionsToExport.length === 0) continue
     
-    html += `  <h2>${section.title}</h2>
-`
-    
-    if (section.instructions) {
-      html += `    <p><em>${section.instructions}</em></p>
-`
-    }
-
     // Check if this is Group A with subsections
     const isGroupA = section.title.match(/^Group\s+A/i)
     
@@ -397,10 +409,13 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
         q.section?.includes('Fill in the Blanks') || q.section?.includes('FILL IN THE')
       )
 
+      if (section.instructions) {
+        html += `    <p><em>${section.instructions}</em></p>
+`
+      }
+
       // MCQ Subsection
       if (mcqQuestions.length > 0) {
-        html += `    <h3 class="subsection-title">Multiple Choice Questions</h3>
-`
         for (const [index, question] of mcqQuestions.entries()) {
           const cleanText = prepareMathForPandoc(question.text)
           html += `    <div class="question">
@@ -423,7 +438,15 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
         }
       }
     } else {
-      // For other groups (B, C, D, E) or sections without subsections
+      // For other groups (B, C, D, E) - show section title
+      html += `  <h2>${section.title}</h2>
+`
+      
+      if (section.instructions) {
+        html += `    <p><em>${section.instructions}</em></p>
+`
+      }
+      
       questionsToExport.forEach((question, index) => {
         const cleanText = prepareMathForPandoc(question.text)
         const marks = section.title.match(/^Group\s+[A]/i) ? '1 mark' : `${question.marks} marks`
