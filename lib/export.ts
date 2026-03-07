@@ -494,8 +494,9 @@ function toRomanNumeral(num: number): string {
 export async function exportToWordWithPandoc(
   title: string, 
   sections: Section[], 
-  selectedQuestionIds?: string[]
-): Promise<void> {
+  selectedQuestionIds?: string[],
+  returnBlob?: boolean
+): Promise<void | Blob> {
   try {
     // Convert all blob URLs to data URLs in question text before generating HTML
     const sectionsWithDataUrls = await Promise.all(sections.map(async (section) => ({
@@ -511,6 +512,13 @@ export async function exportToWordWithPandoc(
     const filename = title.replace(/\s+/g, '_')
 
     const blob = await exportDocument(html, 'docx', filename)
+    
+    // If returnBlob is true, return the blob for API upload instead of downloading
+    if (returnBlob) {
+      return blob
+    }
+    
+    // Otherwise, download the file directly
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url

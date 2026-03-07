@@ -9,7 +9,7 @@ const execAsync = promisify(exec);
 const isDev = process.env.NODE_ENV === 'development';
 
 // Backend API URL (moved from .env.local to main process for security)
-const BACKEND_URL = 'https://admin-lkfe.vercel.app';
+const BACKEND_URL = 'https://paperkraft-admin.vercel.app';
 
 let mainWindow;
 
@@ -154,7 +154,7 @@ app.whenReady().then(() => {
           "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;",
           "img-src 'self' data: blob: https: app:;",
           "font-src 'self' data: https://cdn.jsdelivr.net app:;",
-          "connect-src 'self' blob: http://localhost:* ws://localhost:* https://gateway.pinata.cloud https://*.pinata.cloud app:;"
+          "connect-src 'self' blob: http://localhost:* ws://localhost:* https://gateway.pinata.cloud https://*.pinata.cloud https://paperkraft-admin.vercel.app app:;"
         ].join(' ')
       }
     });

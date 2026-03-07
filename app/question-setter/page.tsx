@@ -87,10 +87,83 @@ export default function QuestionSetterPage() {
   const handleExportWord = async () => {
     setIsExporting(true)
     try {
+      // Get subject ID from localStorage
+      const selectedSubjectData = localStorage.getItem("selectedSubject")
+      if (!selectedSubjectData) {
+        alert("Subject information not found. Please go back to dashboard.")
+        return
+      }
+
+      const subject = JSON.parse(selectedSubjectData)
+      const subjectId = subject._id
+
+      if (!subjectId) {
+        alert("Subject ID not found. Please go back to dashboard.")
+        return
+      }
+
+      // Generate Word document blob
       const selectedIds = selectedQuestions.map(q => q.uniqueId || q.id)
-      await exportToWordWithPandoc(draftTitle, paperSections, selectedIds)
+      const wordBlob = await exportToWordWithPandoc(draftTitle, paperSections, selectedIds, true)
+
+      if (!wordBlob) {
+        throw new Error("Failed to generate Word document")
+      }
+
+      // Create form data and upload directly to backend
+      const formData = new FormData()
+      const fileName = `${draftTitle.replace(/\s+/g, "_")}.docx`
+      const wordFile = new File([wordBlob], fileName, {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      })
+      formData.append("file", wordFile)
+      formData.append("subjectId", subjectId)
+
+      // Get backend API URL from environment or use a default
+      const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL
+
+      if (!BACKEND_API_URL) {
+        console.log("✓ Word document generated:", fileName)
+        console.log("✓ File size:", (wordBlob.size / 1024).toFixed(2), "KB")
+        console.log("✓ Subject ID:", subjectId)
+        console.log("⚠ Backend API URL not configured in environment variables")
+        console.log("ℹ To enable upload, add NEXT_PUBLIC_BACKEND_API_URL to your .env.local file")
+        
+        alert(`Word document generated successfully!\n\nFile: ${fileName}\nSize: ${(wordBlob.size / 1024).toFixed(2)} KB\n\nNote: Backend API URL not configured. Add NEXT_PUBLIC_BACKEND_API_URL to .env.local to enable uploads.`)
+        return
+      }
+
+      console.log("📤 Uploading to:", `${BACKEND_API_URL}/api/upload-mod-paper/${subjectId}`)
+
+      // Upload directly to backend API
+      const response = await fetch(`${BACKEND_API_URL}/api/upload-mod-paper/${subjectId}`, {
+        method: "POST",
+        body: formData,
+        // Add any required headers (e.g., authorization)
+        // headers: {
+        //   'Authorization': `Bearer ${YOUR_AUTH_TOKEN}`
+        // }
+      })
+
+      // Handle non-JSON responses
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text()
+        console.error("Non-JSON response:", text)
+        throw new Error("Server returned an invalid response. Please check the backend API.")
+      }
+
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || result.message || "Upload failed")
+      }
+
+      alert(`Question paper uploaded successfully!\nFile: ${fileName}\nSize: ${(wordBlob.size / 1024).toFixed(2)} KB`)
+      console.log("✓ Upload success:", result)
     } catch (error) {
-      console.error("Export to Word failed:", error)
+      console.error("Export and upload failed:", error)
+      alert(`Failed to upload question paper: ${error instanceof Error ? error.message : "Unknown error"}`)
     } finally {
       setIsExporting(false)
     }
