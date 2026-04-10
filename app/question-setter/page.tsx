@@ -6,6 +6,7 @@ import Header from "@/components/header"
 import LeftPanel from "@/components/left-panel"
 import RightPanel from "@/components/right-panel"
 import { exportToWordWithPandoc } from "@/lib/export"
+import { BACKEND_API_URL } from "@/lib/variables"
 
 // Declare MathJax type
 declare global {
@@ -118,20 +119,6 @@ export default function QuestionSetterPage() {
       })
       formData.append("file", wordFile)
       formData.append("subjectId", subjectId)
-
-      // Get backend API URL from environment or use a default
-      const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL
-
-      if (!BACKEND_API_URL) {
-        console.log("✓ Word document generated:", fileName)
-        console.log("✓ File size:", (wordBlob.size / 1024).toFixed(2), "KB")
-        console.log("✓ Subject ID:", subjectId)
-        console.log("⚠ Backend API URL not configured in environment variables")
-        console.log("ℹ To enable upload, add NEXT_PUBLIC_BACKEND_API_URL to your .env.local file")
-        
-        alert(`Word document generated successfully!\n\nFile: ${fileName}\nSize: ${(wordBlob.size / 1024).toFixed(2)} KB\n\nNote: Backend API URL not configured. Add NEXT_PUBLIC_BACKEND_API_URL to .env.local to enable uploads.`)
-        return
-      }
 
       console.log("📤 Uploading to:", `${BACKEND_API_URL}/api/upload-mod-paper/${subjectId}`)
 

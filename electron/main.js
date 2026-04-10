@@ -4,12 +4,10 @@ const fs = require('fs');
 const os = require('os');
 const { exec } = require('child_process');
 const { promisify } = require('util');
+const { BACKEND_API_URL } = require('./variables');
 
 const execAsync = promisify(exec);
 const isDev = process.env.NODE_ENV === 'development';
-
-// Backend API URL (moved from .env.local to main process for security)
-const BACKEND_URL = 'https://paperkraft-admin.vercel.app';
 
 let mainWindow;
 
@@ -154,7 +152,7 @@ app.whenReady().then(() => {
           "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;",
           "img-src 'self' data: blob: https: app:;",
           "font-src 'self' data: https://cdn.jsdelivr.net app:;",
-          "connect-src 'self' blob: http://localhost:* ws://localhost:* https://gateway.pinata.cloud https://*.pinata.cloud https://paperkraft-admin.vercel.app app:;"
+          `connect-src 'self' blob: http://localhost:* ws://localhost:* https://gateway.pinata.cloud https://*.pinata.cloud ${BACKEND_API_URL} app:;`
         ].join(' ')
       }
     });
@@ -262,7 +260,7 @@ ipcMain.handle('api-login', async (event, email, password) => {
   
   try {
     const https = require('https');
-    const url = new URL(`${BACKEND_URL}/api/login`);
+    const url = new URL(`${BACKEND_API_URL}/api/login`);
     
     const postData = JSON.stringify({ email, password });
     
@@ -319,7 +317,7 @@ ipcMain.handle('api-dashboard', async (event, email, token) => {
   
   try {
     const https = require('https');
-    const url = new URL(`${BACKEND_URL}/api/dashboard`);
+    const url = new URL(`${BACKEND_API_URL}/api/dashboard`);
     
     const postData = JSON.stringify({ email, token });
     
