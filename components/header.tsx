@@ -68,12 +68,7 @@ export default function Header({ draftTitle, setDraftTitle, onSaveDraft, onExpor
             Upload Paper
           </button>
 
-          <button
-            className="p-2 text-foreground hover:bg-neutral-light rounded-lg transition-colors"
-            title="More options"
-          >
-            <MoreVertical className="w-5 h-5" />
-          </button>
+          
         </div>
       </div>
     </header>

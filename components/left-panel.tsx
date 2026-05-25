@@ -157,7 +157,7 @@ export default function LeftPanel({
         <div className="p-6 border-b border-border bg-neutral-lightest">
           <h2 className="text-lg font-semibold text-foreground mb-4">Sample Question Paper</h2>
 
-          <div
+          {/* <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -169,22 +169,22 @@ export default function LeftPanel({
             <p className="text-xs text-neutral-gray">or click to browse</p>
 
             <input ref={fileInputRef} type="file" accept=".docx" onChange={handleFileUpload} className="hidden" />
-          </div>
+          </div> */}
         </div>
       ) : (
         <div className="px-6 py-3 border-b border-border bg-neutral-lightest flex items-center justify-between">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+          {/* <div className="flex items-center gap-2 flex-1 min-w-0">
             <FileText className="w-4 h-4 text-primary flex-shrink-0" />
-            Editing File:
+            Editing Paper:
             <span className="text-sm font-medium text-foreground truncate">{uploadedFileName}</span>
-          </div>
-          <button
+          </div> */}
+          {/* <button
             onClick={handleChangeFile}
             className="px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 rounded transition-colors flex-shrink-0"
           >
             Change File
-          </button>
-          <input ref={fileInputRef} type="file" accept=".docx" onChange={handleFileUpload} className="hidden" />
+          </button> */}
+          {/* <input ref={fileInputRef} type="file" accept=".docx" onChange={handleFileUpload} className="hidden" /> */}
         </div>
       )}
 
