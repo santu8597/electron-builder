@@ -76,6 +76,46 @@ async function convertBlobUrlsToDataUrls(html: string): Promise<string> {
 }
 
 /**
+ * Format a section title for export. For Group headings like "Group B" it
+ * returns "GROUP - B". Otherwise returns the uppercase title.
+ */
+function formatGroupTitle(title: string): string {
+  if (!title) return ''
+  const m = title.match(/Group\s*[-:]?\s*([A-Z])/i)
+  if (m && m[1]) return `GROUP - ${m[1].toUpperCase()}`
+  return title.toUpperCase()
+}
+
+/**
+ * Force all exported text to render in black, overriding any inline or theme colors.
+ */
+function forceBlackExportText(html: string): string {
+  if (!html) return html;
+
+  // First, normalize any generated group header tables (robust to spacing/tabs)
+  // Replace any table that used "table-layout: fixed" (our section title rows)
+  // with a consistent, fixed-layout 3-column table that centers the middle cell.
+  const groupTableRe = /<table[^>]*table-layout:\s*fixed[^>]*>[\s\S]*?<tr>[\s\S]*?<td[^>]*>[\s\S]*?<\/td>[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*>[\s\S]*?<\/td>[\s\S]*?<\/tr>[\s\S]*?<\/table>/gi;
+  html = html.replace(groupTableRe, (_match, middleContent) => {
+    const inner = (middleContent || '').trim();
+    return `<table style="width:100%; table-layout:fixed; border-collapse:collapse; margin:10px 0 6px; font-family: 'Times New Roman', Times, serif; color:#000 !important;"><tr><td style="width:33.33%; padding:8px 0; border:none; vertical-align:middle;"></td><td style="width:33.33%; padding:8px 0; border:none; text-align:center; vertical-align:middle; color:#000 !important;"><div style="display:block; width:100%;">${inner}</div></td><td style="width:33.33%; padding:8px 0; border:none; vertical-align:middle;"></td></tr></table>`
+  })
+
+  // Now parse and force black color on every element
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  doc.body.style.setProperty('color', '#000000', 'important');
+  doc.body.querySelectorAll('*').forEach((element) => {
+    if (element instanceof HTMLElement) {
+      element.style.setProperty('color', '#000000', 'important');
+      element.removeAttribute('color');
+    }
+  });
+
+  return doc.documentElement.outerHTML;
+}
+
+/**
  * EXPORT STRATEGY (Updated Jan 2026):
  * 
  * The new clean export approach provides:
@@ -127,13 +167,33 @@ export async function exportToWord(title: string, sections: Section[]): Promise<
 
     // Add sections and questions
     sections.forEach((section, sectionIndex) => {
-      sections_content.push(
-        new Paragraph({
-          text: section.title,
-          heading: HeadingLevel.HEADING_2,
-          spacing: { before: 200, after: 100 },
-        }),
-      )
+      const isGroupA = section.title.match(/^Group\s+A/i)
+
+      if (!isGroupA) {
+        const groupTitle = formatGroupTitle(section.title)
+        // Create a 3-column table in docx with the title centered in the middle cell
+        sections_content.push(
+          new Table({
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph('')], width: { size: 33, type: 'pct' } }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: groupTitle, bold: true, size: 28 })] })], width: { size: 34, type: 'pct' } }),
+                  new TableCell({ children: [new Paragraph('')], width: { size: 33, type: 'pct' } }),
+                ],
+              }),
+            ],
+          }),
+        )
+      } else {
+        sections_content.push(
+          new Paragraph({
+            text: section.title,
+            heading: HeadingLevel.HEADING_2,
+            spacing: { before: 200, after: 100 },
+          }),
+        )
+      }
 
       if (section.instructions) {
         sections_content.push(
@@ -157,10 +217,14 @@ export async function exportToWord(title: string, sections: Section[]): Promise<
               new TextRun({
                 text: `${question.text} `,
               }),
-              new TextRun({
-                text: `[${question.marks} marks]`,
-                italics: true,
-              }),
+              ...(isGroupA
+                ? [
+                    new TextRun({
+                      text: `[${question.marks} marks]`,
+                      italics: true,
+                    }),
+                  ]
+                : []),
             ],
             spacing: { after: 100 },
           }),
@@ -207,8 +271,16 @@ export function exportAsText(title: string, sections: Section[]): void {
   content += `Total Questions: ${sections.reduce((sum, s) => sum + s.questions.length, 0)}\n\n`
 
   sections.forEach((section, sectionIndex) => {
-    content += `\n${section.title.toUpperCase()}\n`
-    content += `${"-".repeat(section.title.length)}\n`
+    const isGroupA = section.title.match(/^Group\s+A/i)
+
+    if (!isGroupA) {
+      const displayTitle = formatGroupTitle(section.title)
+      content += `\n${displayTitle}\n`
+      content += `${"-".repeat(displayTitle.length)}\n`
+    } else {
+      content += `\n${section.title}\n`
+      content += `${"-".repeat(section.title.length)}\n`
+    }
 
     if (section.instructions) {
       content += `\nInstructions: ${section.instructions}\n`
@@ -216,7 +288,11 @@ export function exportAsText(title: string, sections: Section[]): void {
 
     section.questions.forEach((question, qIndex) => {
       content += `\nQ${sectionIndex + 1}.${qIndex + 1} ${question.text}\n`
-      content += `[${question.marks} marks] [${question.type}]\n`
+      if (isGroupA) {
+        content += `[${question.marks} marks] [${question.type}]\n`
+      } else {
+        content += `[${question.type}]\n`
+      }
     })
   })
 
@@ -312,6 +388,7 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
   <meta charset="UTF-8">
   <style>
     /* Minimal styling - let template.docx control fonts and sizes */
+    body, body * { color: #000 !important; }
     table { border-collapse: collapse; margin: 10px 0; width: 100%; }
     table, th, td { border: 1px solid #333; padding: 8px; }
     .math-display { text-align: center; margin: 15px 0; }
@@ -325,7 +402,7 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
     }
   </style>
 </head>
-<body>
+<body style="color: #000 !important;">
   <table class="header-table" border="1" style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; margin-bottom: 20px; border: 1px solid black;">
     <tr>
       <td style="border: 1px solid black; padding: 10px; width: 25%;"></td>
@@ -344,7 +421,7 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
     </tr>
     <tr>
       <td style="border: 1px solid black; padding: 10px; text-align: left;"><strong>Time Allotted : 2½ hrs</strong></td>
-      <td style="border: 1px solid black; padding: 10px;"></td>
+      <td style="border: 1px solid black; padding: 10px; text-align: center;"><strong><em>Figures out of the right margin indicate full marks.</em></strong></td>
       <td style="border: 1px solid black; padding: 10px; text-align: right;"><strong>Full Marks : 60</strong></td>
     </tr>
   </table>
@@ -378,8 +455,7 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
       <td style="border: 1px solid black; padding: 10px; width: 50%;"></td>
       <td style="border: 1px solid black; padding: 10px; text-align: right; width: 25%;"><strong>1 x 12</strong></td>
     </tr>
-   
-
+    
     <tr>
       <td style="border: 1px solid black; padding: 10px;"></td>
       <td style="border: 1px solid black; padding: 10px; text-align: center;"><em>Choose the correct alternative for the following</em></td>
@@ -387,7 +463,6 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
     </tr>
   </table>
 
- 
 `
 
   for (const section of sections) {
@@ -438,9 +513,16 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
         }
       }
     } else {
-      // For other groups (B, C, D, E) - show section title
-      html += `  <h2>${section.title}</h2>
-`
+      // For other groups (B, C, D, E) - show section title centered in a 3-column row
+        const groupTitle = formatGroupTitle(section.title)
+        html += `  <table style="width: 100%; table-layout: fixed; border-collapse: collapse; margin: 10px 0 6px; font-family: 'Times New Roman', Times, serif; color: #000 !important;">
+      <tr>
+        <td style="width: 33.33%; padding: 0; border: none;"></td>
+        <td style="width: 33.33%; padding: 0; border: none; text-align: center; color: #000 !important;"><strong>${groupTitle}</strong></td>
+        <td style="width: 33.33%; padding: 0; border: none;"></td>
+      </tr>
+    </table>
+  `
       
       if (section.instructions) {
         html += `    <p><em>${section.instructions}</em></p>
@@ -449,10 +531,8 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
       
       questionsToExport.forEach((question, index) => {
         const cleanText = prepareMathForPandoc(question.text)
-        const marks = section.title.match(/^Group\s+[A]/i) ? '1 mark' : `${question.marks} marks`
         html += `    <div class="question">
       <span class="question-number">${index + 1}.</span><span>${cleanText}</span>
-      <span class="marks">[${marks}]</span>
     </div>
 `
       })
@@ -465,7 +545,7 @@ async function generateCleanHTMLForExport(title: string, sections: Section[], se
   html += `</body>
 </html>`
 
-  return html
+  return forceBlackExportText(html)
 }
 
 /**
