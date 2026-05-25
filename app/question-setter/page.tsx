@@ -164,6 +164,7 @@ export default function QuestionSetterPage() {
       }
 
       alert(`Question paper uploaded successfully!\nFile: ${fileName}\nSize: ${(wordBlob.size / 1024).toFixed(2)} KB`)
+      router.push("/dashboard")
       console.log("✓ Upload success:", result)
     } catch (error) {
       console.error("Export and upload failed:", error)
