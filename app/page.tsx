@@ -8,8 +8,9 @@ export default function Home() {
 
   useEffect(() => {
     // Redirect to login page on app launch
-    const isAuthenticated = localStorage.getItem("isAuthenticated")
-    
+    // Use sessionStorage for authentication state so closing the app clears it.
+    const isAuthenticated = sessionStorage.getItem("isAuthenticated")
+
     if (isAuthenticated) {
       router.push("/dashboard")
     } else {

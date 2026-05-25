@@ -50,10 +50,10 @@ export default function DashboardPage() {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    // Check authentication
-    const isAuthenticated = localStorage.getItem("isAuthenticated")
-    const token = localStorage.getItem("token")
-    const moderatorData = localStorage.getItem("moderator")
+    // Check authentication (session-only)
+    const isAuthenticated = sessionStorage.getItem("isAuthenticated")
+    const token = sessionStorage.getItem("token")
+    const moderatorData = sessionStorage.getItem("moderator")
     
     if (!isAuthenticated || !token) {
       router.push("/login")
@@ -99,8 +99,8 @@ export default function DashboardPage() {
 
   const handleInstructionsCancel = () => {
     // User cancelled, log them out and return to login
-    localStorage.removeItem("isAuthenticated")
-    localStorage.removeItem("username")
+    sessionStorage.removeItem("isAuthenticated")
+    sessionStorage.removeItem("username")
     router.push("/login")
   }
 
@@ -112,9 +112,9 @@ export default function DashboardPage() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated")
-    localStorage.removeItem("token")
-    localStorage.removeItem("moderator")
+    sessionStorage.removeItem("isAuthenticated")
+    sessionStorage.removeItem("token")
+    sessionStorage.removeItem("moderator")
     sessionStorage.removeItem("hasSeenInstructions")
     router.push("/login")
   }

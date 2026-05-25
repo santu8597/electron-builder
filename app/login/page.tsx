@@ -36,11 +36,12 @@ export default function LoginPage() {
       const response = await (window as any).electron.apiLogin(email, password)
 
       if (response.ok && response.data.success) {
-        // Store authentication token and user data
-        localStorage.setItem("token", response.data.token)
-        localStorage.setItem("isAuthenticated", "true")
-        localStorage.setItem("moderator", JSON.stringify(response.data.moderator))
-        
+        // Store authentication token and user data in sessionStorage so it
+        // does not persist when the app is closed and reopened.
+        sessionStorage.setItem("token", response.data.token)
+        sessionStorage.setItem("isAuthenticated", "true")
+        sessionStorage.setItem("moderator", JSON.stringify(response.data.moderator))
+
         // Navigate to dashboard
         router.push("/dashboard")
       } else {
