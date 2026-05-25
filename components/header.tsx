@@ -1,8 +1,7 @@
 "use client"
 
-import { Save, Download, MoreVertical } from "lucide-react"
+import { MoreVertical, Upload } from "lucide-react"
 import { useState } from "react"
-import ExportMenu from "./export-menu"
 
 interface HeaderProps {
   draftTitle: string
@@ -14,7 +13,6 @@ interface HeaderProps {
 export default function Header({ draftTitle, setDraftTitle, onSaveDraft, onExportWord }: HeaderProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [tempTitle, setTempTitle] = useState(draftTitle)
-  const [showExportMenu, setShowExportMenu] = useState(false)
 
   const handleSaveTitle = () => {
     if (tempTitle.trim()) {
@@ -61,25 +59,14 @@ export default function Header({ draftTitle, setDraftTitle, onSaveDraft, onExpor
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3">
-  
-
-          <div className="relative">
-            <button
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-light rounded-lg transition-colors"
-              title="Export as PDF or Word"
-            >
-              <Download className="w-4 h-4" />
-              Export
-            </button>
-
-            {showExportMenu && (
-              <ExportMenu
-                onExportWord={onExportWord}
-                onClose={() => setShowExportMenu(false)}
-              />
-            )}
-          </div>
+          <button
+            onClick={onExportWord}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-light rounded-lg transition-colors"
+            title="Upload final paper"
+          >
+            <Upload className="w-4 h-4" />
+            Upload Paper
+          </button>
 
           <button
             className="p-2 text-foreground hover:bg-neutral-light rounded-lg transition-colors"

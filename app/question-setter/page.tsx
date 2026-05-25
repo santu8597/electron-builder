@@ -5,6 +5,16 @@ import { useRouter } from "next/navigation"
 import Header from "@/components/header"
 import LeftPanel from "@/components/left-panel"
 import RightPanel from "@/components/right-panel"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { exportToWordWithPandoc } from "@/lib/export"
 import { BACKEND_API_URL } from "@/lib/variables"
 
@@ -14,9 +24,6 @@ declare global {
     MathJax?: {
       typesetPromise?: (elements?: HTMLElement[]) => Promise<void>
       typeset?: (elements?: HTMLElement[]) => void
-      startup?: {
-        promise?: Promise<void>
-      }
     }
   }
 }
@@ -67,6 +74,7 @@ export default function QuestionSetterPage() {
   const [paperSections, setPaperSections] = useState<Section[]>([])
   const [draftTitle, setDraftTitle] = useState("Question Paper")
   const [isExporting, setIsExporting] = useState(false)
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
   const [pinataUrl, setPinataUrl] = useState<string | null>(null)
 
   useEffect(() => {
@@ -85,7 +93,16 @@ export default function QuestionSetterPage() {
     }
   }, [])
 
-  const handleExportWord = async () => {
+  const handleUploadPaperClick = () => {
+    if (isExporting) {
+      return
+    }
+
+    setShowSubmitConfirm(true)
+  }
+
+  const handleConfirmUpload = async () => {
+    setShowSubmitConfirm(false)
     setIsExporting(true)
     try {
       // Get subject ID from localStorage
@@ -161,8 +178,26 @@ export default function QuestionSetterPage() {
       <Header
         draftTitle={draftTitle}
         setDraftTitle={setDraftTitle}
-        onExportWord={handleExportWord}
+        onExportWord={handleUploadPaperClick}
       />
+      <AlertDialog open={showSubmitConfirm} onOpenChange={setShowSubmitConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to submit the paper?</AlertDialogTitle>
+            <AlertDialogDescription>
+              After submitting, you will not be able to edit it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowSubmitConfirm(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmUpload}>
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="flex flex-1 overflow-hidden">
         <LeftPanel
           parsedContent={parsedContent}
