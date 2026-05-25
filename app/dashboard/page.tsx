@@ -13,9 +13,18 @@ interface Subject {
   code: string
   name: string
   department: string
+  is_questionPaperUploaded: boolean
   createdAt: string
   updatedAt: string
   questionPaper?: {
+    fileName: string
+    fileType: string
+    fileSize: number
+    ipfsHash: string
+    pinataUrl: string
+  }
+  is_mod_questionPaperUploaded: boolean
+  mod_questionPaper?: {
     fileName: string
     fileType: string
     fileSize: number
@@ -193,13 +202,23 @@ export default function DashboardPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Button 
-                      className="w-full" 
-                      onClick={() => handleSetPaper(subject)}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Set Question Paper
-                    </Button>
+                    {subject.is_mod_questionPaperUploaded ? (
+                      <p className="text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        Already submitted. You can't edit this question paper again.
+                      </p>
+                    ) : !subject.is_questionPaperUploaded ? (
+                      <p className="text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                        Question paper not yet uploaded for this subject.
+                      </p>
+                    ) : (
+                      <Button 
+                        className="w-full" 
+                        onClick={() => handleSetPaper(subject)}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Set Question Paper
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               ))}
