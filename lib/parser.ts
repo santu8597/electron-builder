@@ -909,7 +909,7 @@ function extractDifficultyInfo(html: string): {
   // [(CO1)(Understand/LOCQ)]
   // [(CO2)(Apply/HOCQ)]
   // [CO3, Understand, LOCQ]
-  const difficultyPattern = /\[?\(?(CO\s*[1-4])\)?\s*[\(,]?\s*([^\/\),]+)?\s*[\/,]?\s*([^\])\s]+)?\s*\)?\]?/i
+  const difficultyPattern = /\[?\(?(CO\s*[1-6])\)?\s*[\(,]?\s*([^\/\),]+)?\s*[\/,]?\s*([^\])\s]+)?\s*\)?\]?/i
   
   const match = html.match(difficultyPattern)
   

@@ -2,7 +2,7 @@
 
 import { Plus, Eye } from "lucide-react"
 import { useState, useEffect } from "react"
-import type { Section, ParsedQuestion } from "@/app/page"
+import type { Section, ParsedQuestion } from "@/lib/types"
 import SectionBuilder from "./section-builder"
 import NewQuestionModal from "./new-question-modal"
 import PreviewModal from "./preview-modal"
@@ -19,7 +19,7 @@ const ALLOWED_GROUPS = ['A', 'B', 'C', 'D', 'E'] as const;
 
 /**
  * Extract all COs (Course Outcomes) from a question
- * A question can have multiple COs like CO1, CO2, CO3, CO4, CO5
+ * A question can have multiple COs like CO1, CO2, CO3, CO4, CO5, CO6
  * Patterns supported:
  * - [(CO1)(Understand/LOCQ)]
  * - [(CO3, CO5)(Apply/IOCQ)]
@@ -32,7 +32,7 @@ function extractAllCOsFromQuestion(question: ParsedQuestion): string[] {
   
   // First check courseOutcome field
   if (question.courseOutcome) {
-    const matches = question.courseOutcome.matchAll(/CO\s*[1-5]/gi)
+    const matches = question.courseOutcome.matchAll(/CO\s*[1-6]/gi)
     for (const match of matches) {
       const co = match[0].replace(/\s/g, '').toUpperCase()
       cosFound.push(co)
@@ -42,11 +42,11 @@ function extractAllCOsFromQuestion(question: ParsedQuestion): string[] {
   // Parse from question text for various patterns
   if (question.text) {
     // Pattern 1: [(CO3, CO5)(Apply/IOCQ)] or [(CO3,CO5)(Apply/IOCQ)] - multiple COs with or without spaces
-    const multiCoPattern = /\[\(CO\s*[1-5](?:\s*,\s*CO\s*[1-5])+\)\([^\]]*\)\]/gi
+    const multiCoPattern = /\[\(CO\s*[1-6](?:\s*,\s*CO\s*[1-6])+\)\([^\]]*\)\]/gi
     const multiMatches = question.text.matchAll(multiCoPattern)
     for (const match of multiMatches) {
       // Extract all CO numbers from the matched pattern
-      const coNumbers = match[0].matchAll(/CO\s*([1-5])/gi)
+      const coNumbers = match[0].matchAll(/CO\s*([1-6])/gi)
       for (const coMatch of coNumbers) {
         cosFound.push(`CO${coMatch[1]}`)
       }
@@ -54,7 +54,7 @@ function extractAllCOsFromQuestion(question: ParsedQuestion): string[] {
     
     // Pattern 2: [(CO1)(Understand/LOCQ)] - single CO (not already matched by Pattern 1)
     // This pattern should not match if it's part of a multi-CO pattern
-    const singleCoPattern = /\[\(CO\s*([1-5])\)\([^\]]*\)\]/gi
+    const singleCoPattern = /\[\(CO\s*([1-6])\)\([^\]]*\)\]/gi
     const singleMatches = question.text.matchAll(singleCoPattern)
     for (const match of singleMatches) {
       // Only add if this is truly a single CO pattern (not comma-separated)
@@ -65,7 +65,7 @@ function extractAllCOsFromQuestion(question: ParsedQuestion): string[] {
     
     // Pattern 3: (CO1) - just parentheses (with or without space) - fallback
     if (cosFound.length === 0) {
-      const parenPattern = /\(CO\s*([1-5])\)/gi
+      const parenPattern = /\(CO\s*([1-6])\)/gi
       const parenMatches = question.text.matchAll(parenPattern)
       for (const match of parenMatches) {
         cosFound.push(`CO${match[1]}`)
@@ -74,7 +74,7 @@ function extractAllCOsFromQuestion(question: ParsedQuestion): string[] {
     
     // Pattern 4: CO1 - bare CO (only if not already found in other patterns)
     if (cosFound.length === 0) {
-      const barePattern = /CO\s*([1-5])/gi
+      const barePattern = /CO\s*([1-6])/gi
       const bareMatches = question.text.matchAll(barePattern)
       for (const match of bareMatches) {
         cosFound.push(`CO${match[1]}`)
@@ -84,6 +84,27 @@ function extractAllCOsFromQuestion(question: ParsedQuestion): string[] {
   
   // Return array with potential duplicates (important for sub-questions)
   return cosFound
+}
+
+function extractQuestionTypesFromQuestion(question: ParsedQuestion): ('LOCQ' | 'HOCQ' | 'IOCQ')[] {
+  const questionTypes: ('LOCQ' | 'HOCQ' | 'IOCQ')[] = []
+
+  if (question.text) {
+    const textMatches = question.text.match(/\b(LOCQ|HOCQ|IOCQ)\b/gi) || []
+    textMatches.forEach((match) => {
+      questionTypes.push(match.toUpperCase() as 'LOCQ' | 'HOCQ' | 'IOCQ')
+    })
+  }
+
+  // If the text does not explicitly carry the labels, fall back to the parsed field.
+  if (questionTypes.length === 0 && question.questionType) {
+    const fieldMatch = question.questionType.match(/\b(LOCQ|HOCQ|IOCQ)\b/i)
+    if (fieldMatch) {
+      questionTypes.push(fieldMatch[1].toUpperCase() as 'LOCQ' | 'HOCQ' | 'IOCQ')
+    }
+  }
+
+  return questionTypes
 }
 
 export default function RightPanel({
@@ -100,20 +121,36 @@ export default function RightPanel({
     CO2: 0,
     CO3: 0,
     CO4: 0,
-    CO5: 0
+    CO5: 0,
+    CO6: 0
+  })
+  const [questionTypeTotals, setQuestionTypeTotals] = useState<{
+    total: number
+    counts: Record<string, number>
+  }>({
+    total: 0,
+    counts: { LOCQ: 0, HOCQ: 0, IOCQ: 0 }
   })
 
-  // Update CO counts whenever paperSections changes
+  // Update CO and question type counts whenever paperSections changes
   useEffect(() => {
     const counts: Record<string, number> = {
       CO1: 0,
       CO2: 0,
       CO3: 0,
       CO4: 0,
-      CO5: 0
+      CO5: 0,
+      CO6: 0
     }
+    const typeCounts: Record<string, number> = {
+      LOCQ: 0,
+      HOCQ: 0,
+      IOCQ: 0,
+    }
+    let groupBToEQuestionCount = 0
 
     paperSections.forEach((section) => {
+      const sectionGroup = section.title.replace(/^Group\s+/i, '').trim().toUpperCase()
       section.questions.forEach((q) => {
         const cos = extractAllCOsFromQuestion(q)
         
@@ -125,10 +162,24 @@ export default function RightPanel({
             }
           })
         }
+
+        if (['B', 'C', 'D', 'E'].includes(sectionGroup)) {
+          groupBToEQuestionCount += 1
+          const questionTypes = extractQuestionTypesFromQuestion(q)
+          questionTypes.forEach((questionType) => {
+            if (typeCounts[questionType] !== undefined) {
+              typeCounts[questionType] += 1
+            }
+          })
+        }
       })
     })
 
     setCoCounts(counts)
+    setQuestionTypeTotals({
+      total: groupBToEQuestionCount,
+      counts: typeCounts,
+    })
   }, [paperSections])
 
   const totalMarks = paperSections.reduce((sum, section) => {
@@ -137,6 +188,7 @@ export default function RightPanel({
 
   // Calculate total COs for percentage calculation
   const totalCOs = Object.values(coCounts).reduce((sum, count) => sum + count, 0)
+  const totalQuestionTypes = questionTypeTotals.total
 
   // Get available groups that haven't been used yet
   const availableGroups = ALLOWED_GROUPS.filter(
@@ -167,25 +219,44 @@ export default function RightPanel({
             </p>
           </div>
           
-          {/* CO Counters */}
-          <div className="flex items-center gap-3 pl-6 border-l border-border">
-            {['CO1', 'CO2', 'CO3', 'CO4', 'CO5'].map(co => {
-              const count = coCounts[co] || 0
-              const percentage = totalCOs > 0 ? ((count / totalCOs) * 100).toFixed(1) : '0.0'
-              return (
-                <div key={co} className="flex flex-col items-center gap-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-medium text-neutral-gray">{co}:</span>
-                    <span className={`text-sm font-semibold ${count > 0 ? 'text-primary' : 'text-neutral-gray'}`}>
-                      {count}
+          <div className="flex flex-col gap-1 pl-6 border-l border-border min-w-max">
+            <div className="flex items-center gap-3 flex-wrap">
+              {['CO1', 'CO2', 'CO3', 'CO4', 'CO5', 'CO6'].map(co => {
+                const count = coCounts[co] || 0
+                const percentage = totalCOs > 0 ? ((count / totalCOs) * 100).toFixed(1) : '0.0'
+                return (
+                  <div key={co} className="flex flex-col items-center gap-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-medium text-neutral-gray">{co}:</span>
+                      <span className={`text-sm font-semibold ${count > 0 ? 'text-primary' : 'text-neutral-gray'}`}>
+                        {count}
+                      </span>
+                    </div>
+                    <span className="text-xs text-neutral-gray">
+                      {percentage}%
                     </span>
                   </div>
-                  <span className="text-xs text-neutral-gray">
-                    {percentage}%
-                  </span>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
+            <div className="flex items-center gap-3 flex-wrap text-[10px] leading-none">
+              {['IOCQ', 'HOCQ', 'LOCQ'].map((questionType) => {
+                const count = questionTypeTotals.counts[questionType] || 0
+                const percentage = totalQuestionTypes > 0 ? ((count / totalQuestionTypes) * 100).toFixed(1) : '0.0'
+
+                return (
+                  <div key={questionType} className="flex min-w-12 flex-col items-center gap-0.5">
+                    <span className="font-medium text-neutral-gray">{questionType}</span>
+                    <span className={`font-semibold ${count > 0 ? 'text-primary' : 'text-neutral-gray'}`}>
+                      {count}
+                    </span>
+                    <span className="text-neutral-gray">
+                      {percentage}%
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
 
